@@ -94,25 +94,36 @@ const ListDetail = () => {
   };
 
   const fetchItemPrice = async (itemName: string) => {
-    if (!itemName.trim()) return;
+    if (!itemName.trim()) {
+      toast.error("Please enter an item name first");
+      return;
+    }
     
     setFetchingPrice(true);
     try {
+      console.log("Fetching price for:", itemName);
       const { data, error } = await supabase.functions.invoke('fetch-item-price', {
         body: { itemName }
       });
 
-      if (error) throw error;
+      console.log("Price response:", data, error);
+
+      if (error) {
+        console.error("Function error:", error);
+        throw error;
+      }
 
       if (data?.price) {
         setNewItemPrice(data.price.toString());
-        toast.success(`Price fetched: $${data.price}`, {
-          description: data.source === 'estimated' ? 'Estimated price' : 'From price database'
+        toast.success(`Price: $${data.price}`, {
+          description: data.source === 'estimated' ? 'Estimated price' : 'From database'
         });
+      } else {
+        toast.error("No price data received");
       }
     } catch (error) {
       console.error("Error fetching price:", error);
-      toast.error("Could not fetch price automatically");
+      toast.error("Failed to fetch price. Please enter manually.");
     } finally {
       setFetchingPrice(false);
     }
@@ -318,8 +329,16 @@ const ListDetail = () => {
                     onClick={() => fetchItemPrice(newItemName)}
                     disabled={!newItemName || fetchingPrice}
                     size="sm"
+                    className="shrink-0"
                   >
-                    {fetchingPrice ? "..." : "Auto"}
+                    {fetchingPrice ? (
+                      <Sparkles className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-1" />
+                        Auto
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
