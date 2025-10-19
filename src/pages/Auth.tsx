@@ -44,7 +44,7 @@ const Auth = () => {
         });
 
         if (error) throw error;
-        toast.success("Account created! Welcome to Lovable AI Grocery Planner!");
+        toast.success("Account created! Welcome to Smart Basket!");
         navigate("/");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -71,7 +71,7 @@ const Auth = () => {
             <ShoppingCart className="w-8 h-8 text-primary-foreground" />
           </div>
           <CardTitle className="text-3xl font-bold">
-            Lovable AI Grocery Planner
+            Smart Basket
           </CardTitle>
           <CardDescription>
             {isSignUp ? "Create your account to get started" : "Welcome back! Sign in to continue"}

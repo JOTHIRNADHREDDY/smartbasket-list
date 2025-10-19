@@ -57,6 +57,7 @@ const ListDetail = () => {
   const [newItemQuantity, setNewItemQuantity] = useState("1");
   const [newItemPrice, setNewItemPrice] = useState("");
   const [newItemCategory, setNewItemCategory] = useState("");
+  const [fetchingPrice, setFetchingPrice] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -89,6 +90,31 @@ const ListDetail = () => {
       navigate("/lists");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchItemPrice = async (itemName: string) => {
+    if (!itemName.trim()) return;
+    
+    setFetchingPrice(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-item-price', {
+        body: { itemName }
+      });
+
+      if (error) throw error;
+
+      if (data?.price) {
+        setNewItemPrice(data.price.toString());
+        toast.success(`Price fetched: $${data.price}`, {
+          description: data.source === 'estimated' ? 'Estimated price' : 'From price database'
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching price:", error);
+      toast.error("Could not fetch price automatically");
+    } finally {
+      setFetchingPrice(false);
     }
   };
 
@@ -274,17 +300,29 @@ const ListDetail = () => {
                         onChange={(e) => setNewItemQuantity(e.target.value)}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="price">Price per Unit</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={newItemPrice}
-                        onChange={(e) => setNewItemPrice(e.target.value)}
-                      />
-                    </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Price per Unit</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={newItemPrice}
+                    onChange={(e) => setNewItemPrice(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fetchItemPrice(newItemName)}
+                    disabled={!newItemName || fetchingPrice}
+                    size="sm"
+                  >
+                    {fetchingPrice ? "..." : "Auto"}
+                  </Button>
+                </div>
+              </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="category">Category (optional)</Label>

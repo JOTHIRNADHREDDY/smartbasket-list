@@ -99,6 +99,41 @@ export type Database = {
           },
         ]
       }
+      list_shares: {
+        Row: {
+          created_at: string
+          id: string
+          list_id: string
+          permission: string
+          shared_by: string
+          shared_with_email: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          list_id: string
+          permission?: string
+          shared_by: string
+          shared_with_email: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          list_id?: string
+          permission?: string
+          shared_by?: string
+          shared_with_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_shares_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "grocery_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
