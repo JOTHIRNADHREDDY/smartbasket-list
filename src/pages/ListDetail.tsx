@@ -65,6 +65,75 @@ interface GroceryList {
   shopping_date: string | null;
 }
 
+// Sortable Item Component (must be outside to avoid hooks violation)
+const SortableItem = ({ 
+  item, 
+  onToggle, 
+  onDelete 
+}: { 
+  item: GroceryItem; 
+  onToggle: (id: string, completed: boolean) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent/5 transition-colors"
+    >
+      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <Checkbox
+        checked={item.completed}
+        onCheckedChange={() => onToggle(item.id, item.completed)}
+      />
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span
+            className={`font-medium ${
+              item.completed ? "line-through text-muted-foreground" : ""
+            }`}
+          >
+            {item.name}
+          </span>
+          {item.category && (
+            <Badge variant="secondary" className="text-xs">
+              {item.category}
+            </Badge>
+          )}
+        </div>
+        <div className="text-sm text-muted-foreground mt-1">
+          Qty: {item.quantity} × ₹{item.price_per_unit.toFixed(2)} = ₹
+          {(item.quantity * item.price_per_unit).toFixed(2)}
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onDelete(item.id)}
+      >
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+    </div>
+  );
+};
+
 const ListDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -261,66 +330,6 @@ const ListDetail = () => {
     }
   };
 
-  const SortableItem = ({ item }: { item: GroceryItem }) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: item.id });
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.5 : 1,
-    };
-
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent/5 transition-colors"
-      >
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
-          <GripVertical className="h-5 w-5 text-muted-foreground" />
-        </div>
-        <Checkbox
-          checked={item.completed}
-          onCheckedChange={() => handleToggleItem(item.id, item.completed)}
-        />
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span
-              className={`font-medium ${
-                item.completed ? "line-through text-muted-foreground" : ""
-              }`}
-            >
-              {item.name}
-            </span>
-            {item.category && (
-              <Badge variant="secondary" className="text-xs">
-                {item.category}
-              </Badge>
-            )}
-          </div>
-          <div className="text-sm text-muted-foreground mt-1">
-            Qty: {item.quantity} × ₹{item.price_per_unit.toFixed(2)} = ₹
-            {(item.quantity * item.price_per_unit).toFixed(2)}
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleDeleteItem(item.id)}
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -508,7 +517,12 @@ const ListDetail = () => {
               <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {items.map((item) => (
-                    <SortableItem key={item.id} item={item} />
+                    <SortableItem 
+                      key={item.id} 
+                      item={item} 
+                      onToggle={handleToggleItem}
+                      onDelete={handleDeleteItem}
+                    />
                   ))}
                 </div>
               </SortableContext>
