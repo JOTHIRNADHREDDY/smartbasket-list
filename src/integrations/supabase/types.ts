@@ -24,9 +24,7 @@ export type Database = {
           name: string
           position: number
           price_per_unit: number
-          purchased: boolean | null
           quantity: number
-          unit: string | null
           updated_at: string
         }
         Insert: {
@@ -38,9 +36,7 @@ export type Database = {
           name: string
           position?: number
           price_per_unit?: number
-          purchased?: boolean | null
           quantity?: number
-          unit?: string | null
           updated_at?: string
         }
         Update: {
@@ -52,9 +48,7 @@ export type Database = {
           name?: string
           position?: number
           price_per_unit?: number
-          purchased?: boolean | null
           quantity?: number
-          unit?: string | null
           updated_at?: string
         }
         Relationships: [

@@ -47,8 +47,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { formatPrice } from "@/lib/formatPrice";
-import BudgetBar from "@/components/BudgetBar";
 import LovaChat from "@/components/LovaChat";
 
 interface GroceryItem {
@@ -58,8 +56,6 @@ interface GroceryItem {
   price_per_unit: number;
   category: string | null;
   completed: boolean;
-  purchased: boolean;
-  unit: string;
 }
 
 interface GroceryList {
@@ -73,13 +69,11 @@ interface GroceryList {
 const SortableItem = ({ 
   item, 
   onToggle, 
-  onDelete,
-  onTogglePurchased
+  onDelete 
 }: { 
   item: GroceryItem; 
   onToggle: (id: string, completed: boolean) => void;
   onDelete: (id: string) => void;
-  onTogglePurchased: (id: string, purchased: boolean) => void;
 }) => {
   const {
     attributes,
@@ -96,34 +90,24 @@ const SortableItem = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const itemTotal = item.quantity * item.price_per_unit;
-
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent/5 transition-colors ${
-        item.purchased ? 'bg-muted/30' : ''
-      }`}
+      className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent/5 transition-colors"
     >
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
-      <div className="flex flex-col gap-2">
-        <Checkbox
-          checked={item.completed}
-          onCheckedChange={() => onToggle(item.id, item.completed)}
-        />
-        <Checkbox
-          checked={item.purchased}
-          onCheckedChange={() => onTogglePurchased(item.id, item.purchased)}
-        />
-      </div>
+      <Checkbox
+        checked={item.completed}
+        onCheckedChange={() => onToggle(item.id, item.completed)}
+      />
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <span
             className={`font-medium ${
-              item.purchased ? "line-through text-muted-foreground" : ""
+              item.completed ? "line-through text-muted-foreground" : ""
             }`}
           >
             {item.name}
@@ -133,12 +117,10 @@ const SortableItem = ({
               {item.category}
             </Badge>
           )}
-          {item.purchased && (
-            <Badge variant="outline" className="text-xs">Purchased ✓</Badge>
-          )}
         </div>
         <div className="text-sm text-muted-foreground mt-1">
-          {item.quantity} {item.unit || 'pcs'} × {formatPrice(item.price_per_unit)} = {formatPrice(itemTotal)}
+          Qty: {item.quantity} × ₹{item.price_per_unit.toFixed(2)} = ₹
+          {(item.quantity * item.price_per_unit).toFixed(2)}
         </div>
       </div>
       <Button
@@ -216,22 +198,21 @@ const ListDetail = () => {
     setFetchingPrice(true);
     try {
       console.log("Fetching price for:", itemName);
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-item-price?item=${encodeURIComponent(itemName)}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          }
-        }
-      );
+      const { data, error } = await supabase.functions.invoke('fetch-item-price', {
+        body: { itemName }
+      });
 
-      const data = await response.json();
-      console.log("Price response:", data);
+      console.log("Price response:", data, error);
 
-      if (data?.unitPrice) {
-        setNewItemPrice(data.unitPrice.toString());
-        toast.success(`${formatPrice(data.unitPrice)} from ${data.source}`, {
-          description: `${data.quantity} - ${data.updated}`
+      if (error) {
+        console.error("Function error:", error);
+        throw error;
+      }
+
+      if (data?.price) {
+        setNewItemPrice(data.price.toString());
+        toast.success(`Price: ₹${data.price}`, {
+          description: data.source === 'estimated' ? 'Estimated price' : 'From database'
         });
       } else {
         toast.error("No price data received");
@@ -282,21 +263,6 @@ const ListDetail = () => {
     } catch (error) {
       console.error("Error updating item:", error);
       toast.error("Failed to update item");
-    }
-  };
-
-  const handleTogglePurchased = async (itemId: string, purchased: boolean) => {
-    try {
-      const { error } = await supabase
-        .from("grocery_items")
-        .update({ purchased: !purchased })
-        .eq("id", itemId);
-
-      if (error) throw error;
-      fetchListAndItems();
-    } catch (error) {
-      console.error("Error updating purchased status:", error);
-      toast.error("Failed to update purchased status");
     }
   };
 
@@ -381,36 +347,61 @@ const ListDetail = () => {
         </Button>
       </div>
 
-      <BudgetBar budget={list.budget} totalCost={totalCost} />
-
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{formatPrice(totalCost)}</div>
-            <p className="text-sm text-muted-foreground mt-1">
-              {completedCount} of {items.length} items completed
-            </p>
+            <motion.div
+              className="flex items-baseline gap-2"
+              animate={isOverBudget ? { scale: [1, 1.05, 1] } : {}}
+              transition={{ duration: 0.5 }}
+            >
+              <span className={`text-3xl font-bold ${isOverBudget ? "text-destructive" : ""}`}>
+                ₹{totalCost.toFixed(2)}
+              </span>
+              {list.budget > 0 && (
+                <span className="text-muted-foreground">/ ₹{list.budget.toFixed(2)}</span>
+              )}
+            </motion.div>
+            {isOverBudget && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-1 text-destructive text-sm mt-2"
+              >
+                <AlertCircle className="h-4 w-4" />
+                Oops! Over budget by ₹{(totalCost - list.budget).toFixed(2)}! 😅
+              </motion.div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Quick Stats</CardTitle>
+            <CardTitle className="text-sm font-medium">Progress</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Progress:</span>
-                <Badge>{items.length ? Math.round((completedCount / items.length) * 100) : 0}%</Badge>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Avg per item:</span>
-                <span className="font-medium">{formatPrice(items.length ? totalCost / items.length : 0)}</span>
-              </div>
+            <div className="text-3xl font-bold">
+              {completedCount} / {items.length}
             </div>
+            <p className="text-sm text-muted-foreground mt-1">items completed</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Budget Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Badge variant={isOverBudget ? "destructive" : "default"} className="text-lg">
+              {list.budget > 0
+                ? isOverBudget
+                  ? "Over Budget"
+                  : "Within Budget"
+                : "No Budget Set"}
+            </Badge>
           </CardContent>
         </Card>
       </div>
@@ -532,7 +523,6 @@ const ListDetail = () => {
                       item={item} 
                       onToggle={handleToggleItem}
                       onDelete={handleDeleteItem}
-                      onTogglePurchased={handleTogglePurchased}
                     />
                   ))}
                 </div>

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { TrendingUp, DollarSign, ShoppingBag, Award } from "lucide-react";
-import { formatPrice } from "@/lib/formatPrice";
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Award } from "lucide-react";
 
 interface AnalyticsProps {
   userId: string;
@@ -69,7 +68,7 @@ const Analytics = ({ userId }: AnalyticsProps) => {
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{formatPrice(stats.totalSpent)}</div>
+            <div className="text-2xl font-bold text-primary">₹{stats.totalSpent.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">All time spending</p>
           </CardContent>
         </Card>
@@ -102,7 +101,7 @@ const Analytics = ({ userId }: AnalyticsProps) => {
             <Award className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-info">{formatPrice(stats.avgListCost)}</div>
+            <div className="text-2xl font-bold text-info">₹{stats.avgListCost.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">Average spending</p>
           </CardContent>
         </Card>
