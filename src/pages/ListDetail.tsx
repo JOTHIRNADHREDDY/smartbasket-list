@@ -147,6 +147,14 @@ const ListDetail = () => {
   const [newItemCategory, setNewItemCategory] = useState("");
   const [fetchingPrice, setFetchingPrice] = useState(false);
 
+  // Initialize sensors at the top (before any returns)
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   useEffect(() => {
     if (id) {
       fetchListAndItems();
@@ -294,13 +302,6 @@ const ListDetail = () => {
   );
   const completedCount = items.filter((item) => item.completed).length;
   const isOverBudget = list.budget > 0 && totalCost > list.budget;
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
