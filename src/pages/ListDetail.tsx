@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import {
   Plus,
   Trash2,
@@ -15,6 +16,7 @@ import {
   DollarSign,
   Sparkles,
   AlertCircle,
+  GripVertical,
 } from "lucide-react";
 import {
   Dialog,
@@ -28,7 +30,24 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import AIAssistant from "@/components/AIAssistant";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import LovaChat from "@/components/LovaChat";
 
 interface GroceryItem {
   id: string;
@@ -115,7 +134,7 @@ const ListDetail = () => {
 
       if (data?.price) {
         setNewItemPrice(data.price.toString());
-        toast.success(`Price: $${data.price}`, {
+        toast.success(`Price: ₹${data.price}`, {
           description: data.source === 'estimated' ? 'Estimated price' : 'From database'
         });
       } else {
@@ -207,6 +226,101 @@ const ListDetail = () => {
   const completedCount = items.filter((item) => item.completed).length;
   const isOverBudget = list.budget > 0 && totalCost > list.budget;
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
+
+      const newItems = arrayMove(items, oldIndex, newIndex);
+      setItems(newItems);
+
+      // Update positions in database
+      try {
+        const updates = newItems.map((item, index) =>
+          supabase
+            .from("grocery_items")
+            .update({ position: index })
+            .eq("id", item.id)
+        );
+        await Promise.all(updates);
+        toast.success("Items reordered! 🎯");
+      } catch (error) {
+        console.error("Error updating positions:", error);
+        toast.error("Failed to save new order");
+        fetchListAndItems(); // Revert on error
+      }
+    }
+  };
+
+  const SortableItem = ({ item }: { item: GroceryItem }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: item.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent/5 transition-colors"
+      >
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+          <GripVertical className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <Checkbox
+          checked={item.completed}
+          onCheckedChange={() => handleToggleItem(item.id, item.completed)}
+        />
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span
+              className={`font-medium ${
+                item.completed ? "line-through text-muted-foreground" : ""
+              }`}
+            >
+              {item.name}
+            </span>
+            {item.category && (
+              <Badge variant="secondary" className="text-xs">
+                {item.category}
+              </Badge>
+            )}
+          </div>
+          <div className="text-sm text-muted-foreground mt-1">
+            Qty: {item.quantity} × ₹{item.price_per_unit.toFixed(2)} = ₹
+            {(item.quantity * item.price_per_unit).toFixed(2)}
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleDeleteItem(item.id)}
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -229,17 +343,27 @@ const ListDetail = () => {
             <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold">${totalCost.toFixed(2)}</span>
+            <motion.div
+              className="flex items-baseline gap-2"
+              animate={isOverBudget ? { scale: [1, 1.05, 1] } : {}}
+              transition={{ duration: 0.5 }}
+            >
+              <span className={`text-3xl font-bold ${isOverBudget ? "text-destructive" : ""}`}>
+                ₹{totalCost.toFixed(2)}
+              </span>
               {list.budget > 0 && (
-                <span className="text-muted-foreground">/ ${list.budget.toFixed(2)}</span>
+                <span className="text-muted-foreground">/ ₹{list.budget.toFixed(2)}</span>
               )}
-            </div>
+            </motion.div>
             {isOverBudget && (
-              <div className="flex items-center gap-1 text-destructive text-sm mt-2">
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-1 text-destructive text-sm mt-2"
+              >
                 <AlertCircle className="h-4 w-4" />
-                Over budget by ${(totalCost - list.budget).toFixed(2)}!
-              </div>
+                Oops! Over budget by ₹{(totalCost - list.budget).toFixed(2)}! 😅
+              </motion.div>
             )}
           </CardContent>
         </Card>
@@ -272,7 +396,7 @@ const ListDetail = () => {
         </Card>
       </div>
 
-      <AIAssistant listId={id!} onItemsGenerated={fetchListAndItems} />
+      <LovaChat listId={id!} onItemsGenerated={fetchListAndItems} />
 
       <Card>
         <CardHeader>
@@ -364,50 +488,31 @@ const ListDetail = () => {
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No items yet. Add your first item or use AI to generate a list!
-            </div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-12"
+            >
+              <div className="text-6xl mb-4">🛒</div>
+              <p className="text-muted-foreground text-lg">Your cart is empty... for now! 😋</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Click "Add Item" or chat with Lova to get started! 🩵
+              </p>
+            </motion.div>
           ) : (
-            <div className="space-y-2">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent/5 transition-colors"
-                >
-                  <Checkbox
-                    checked={item.completed}
-                    onCheckedChange={() => handleToggleItem(item.id, item.completed)}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`font-medium ${
-                          item.completed ? "line-through text-muted-foreground" : ""
-                        }`}
-                      >
-                        {item.name}
-                      </span>
-                      {item.category && (
-                        <Badge variant="secondary" className="text-xs">
-                          {item.category}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Qty: {item.quantity} × ${item.price_per_unit.toFixed(2)} = $
-                      {(item.quantity * item.price_per_unit).toFixed(2)}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteItem(item.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {items.map((item) => (
+                    <SortableItem key={item.id} item={item} />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           )}
         </CardContent>
       </Card>

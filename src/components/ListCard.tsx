@@ -133,16 +133,16 @@ const ListCard = ({ list, onDelete }: ListCardProps) => {
           <div className="flex items-center justify-between pt-2 border-t border-border">
             <div className="flex items-center gap-1 text-sm">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold">${list.totalCost?.toFixed(2) || "0.00"}</span>
+              <span className="font-semibold">₹{list.totalCost?.toFixed(2) || "0.00"}</span>
               {list.budget > 0 && (
                 <span className="text-muted-foreground">
-                  / ${list.budget.toFixed(2)}
+                  / ₹{list.budget.toFixed(2)}
                 </span>
               )}
             </div>
             {isOverBudget && (
               <Badge variant="destructive" className="text-xs">
-                Over Budget!
+                Over Budget! 😅
               </Badge>
             )}
           </div>

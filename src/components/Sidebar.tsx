@@ -1,4 +1,4 @@
-import { Home, ListTodo, Settings, LogOut, Moon, Sun } from "lucide-react";
+import { Home, ListTodo, Settings, LogOut, Moon, Sun, BarChart3 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,14 +19,17 @@ const Sidebar = () => {
   const navItems = [
     { icon: Home, label: "Dashboard", path: "/" },
     { icon: ListTodo, label: "My Lists", path: "/lists" },
+    { icon: BarChart3, label: "Analytics", path: "/analytics" },
     { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
   return (
     <div className="w-64 h-screen bg-card border-r border-border flex flex-col">
       <div className="p-6 border-b border-border">
-        <h1 className="text-2xl font-bold text-primary">Smart Basket</h1>
-        <p className="text-sm text-muted-foreground mt-1">AI-Powered Shopping</p>
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          Lovable Grocery 🩵
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">with Lova AI Assistant</p>
       </div>
 
       <nav className="flex-1 p-4 space-y-2">
