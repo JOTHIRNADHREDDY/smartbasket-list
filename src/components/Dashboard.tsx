@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart, DollarSign, CheckCircle2, TrendingUp } from "lucide-react";
+import { ShoppingCart, IndianRupee, CheckCircle2, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatPrice } from "@/lib/formatPrice";
 
 interface DashboardStats {
   totalLists: number;
@@ -111,7 +112,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-info">
-              ${stats?.totalBudget.toFixed(2) || "0.00"}
+              {formatPrice(stats?.totalBudget || 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Across all lists</p>
           </CardContent>
@@ -120,11 +121,11 @@ const Dashboard = () => {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-            <DollarSign className="h-4 w-4 text-accent" />
+            <IndianRupee className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-accent">
-              ${stats?.totalSpent.toFixed(2) || "0.00"}
+              {formatPrice(stats?.totalSpent || 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {stats?.totalBudget && stats.totalSpent > stats.totalBudget ? (
