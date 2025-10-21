@@ -112,7 +112,7 @@ export const ShareListDialog = ({ listId, listName, open, onOpenChange }: ShareL
         <DialogHeader>
           <DialogTitle>Share "{listName}"</DialogTitle>
           <DialogDescription>
-            Share this list with family members by email
+            Share this list with family members by email. They must be registered with Smart Basket using the same email address to access the shared list.
           </DialogDescription>
         </DialogHeader>
 

@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ShareListDialog } from "./ShareListDialog";
+import { formatPrice } from "@/lib/formatPrice";
 
 interface ListCardProps {
   list: {
@@ -133,10 +134,10 @@ const ListCard = ({ list, onDelete }: ListCardProps) => {
           <div className="flex items-center justify-between pt-2 border-t border-border">
             <div className="flex items-center gap-1 text-sm">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold">₹{list.totalCost?.toFixed(2) || "0.00"}</span>
+              <span className="font-semibold">{formatPrice(list.totalCost || 0)}</span>
               {list.budget > 0 && (
                 <span className="text-muted-foreground">
-                  / ₹{list.budget.toFixed(2)}
+                  / {formatPrice(list.budget)}
                 </span>
               )}
             </div>

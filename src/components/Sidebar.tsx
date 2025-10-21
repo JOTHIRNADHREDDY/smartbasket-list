@@ -1,14 +1,17 @@
-import { Home, ListTodo, Settings, LogOut, Moon, Sun, BarChart3 } from "lucide-react";
+import { Home, ListTodo, Settings, LogOut, Moon, Sun, BarChart3, Menu, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
+import { useState } from "react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -23,11 +26,11 @@ const Sidebar = () => {
     { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
-  return (
-    <div className="w-64 h-screen bg-card border-r border-border flex flex-col">
+  const SidebarContent = () => (
+    <>
       <div className="p-6 border-b border-border">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Lovable Grocery 🩵
+          Smart Basket 🧺
         </h1>
         <p className="text-sm text-muted-foreground mt-1">with Lova AI Assistant</p>
       </div>
@@ -38,7 +41,7 @@ const Sidebar = () => {
           const isActive = location.pathname === item.path;
           
           return (
-            <Link key={item.path} to={item.path}>
+            <Link key={item.path} to={item.path} onClick={() => setOpen(false)}>
               <Button
                 variant={isActive ? "secondary" : "ghost"}
                 className="w-full justify-start"
@@ -78,7 +81,35 @@ const Sidebar = () => {
           Logout
         </Button>
       </div>
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile Header with Hamburger */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-background border-b border-border p-4 flex items-center justify-between">
+        <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          Smart Basket 🧺
+        </h1>
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0">
+            <div className="h-full flex flex-col">
+              <SidebarContent />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:flex w-64 h-screen bg-card border-r border-border flex-col">
+        <SidebarContent />
+      </div>
+    </>
   );
 };
 

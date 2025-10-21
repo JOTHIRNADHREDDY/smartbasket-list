@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Award } from "lucide-react";
+import { formatPrice } from "@/lib/formatPrice";
 
 interface AnalyticsProps {
   userId: string;
@@ -39,7 +40,7 @@ const Analytics = ({ userId }: AnalyticsProps) => {
       if (!items) return;
 
       const totalSpent = items.reduce(
-        (sum, item) => sum + item.quantity * item.price_per_unit,
+        (sum, item) => sum + item.price_per_unit,
         0
       );
 
@@ -68,7 +69,7 @@ const Analytics = ({ userId }: AnalyticsProps) => {
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">₹{stats.totalSpent.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-primary">{formatPrice(stats.totalSpent)}</div>
             <p className="text-xs text-muted-foreground mt-1">All time spending</p>
           </CardContent>
         </Card>
@@ -101,7 +102,7 @@ const Analytics = ({ userId }: AnalyticsProps) => {
             <Award className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-info">₹{stats.avgListCost.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-info">{formatPrice(stats.avgListCost)}</div>
             <p className="text-xs text-muted-foreground mt-1">Average spending</p>
           </CardContent>
         </Card>

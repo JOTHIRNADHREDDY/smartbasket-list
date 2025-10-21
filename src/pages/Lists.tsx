@@ -61,7 +61,7 @@ const Lists = () => {
           const itemCount = items?.length || 0;
           const completedCount = items?.filter((item) => item.completed).length || 0;
           const totalCost = items?.reduce(
-            (sum, item) => sum + Number(item.quantity) * Number(item.price_per_unit),
+            (sum, item) => sum + Number(item.price_per_unit),
             0
           ) || 0;
 
@@ -176,7 +176,7 @@ const Lists = () => {
                   id="budget"
                   type="number"
                   step="0.01"
-                  placeholder="100.00"
+                  placeholder="5000.00"
                   value={newListBudget}
                   onChange={(e) => setNewListBudget(e.target.value)}
                 />

@@ -56,10 +56,10 @@ const Home = () => {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-20 lg:pt-8">
         <div className="max-w-7xl mx-auto space-y-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">
               Welcome back{user.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ""}!
             </h1>
             <p className="text-muted-foreground">

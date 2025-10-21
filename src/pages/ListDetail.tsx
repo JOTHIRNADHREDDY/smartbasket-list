@@ -48,6 +48,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import LovaChat from "@/components/LovaChat";
+import { formatPrice } from "@/lib/formatPrice";
 
 interface GroceryItem {
   id: string;
@@ -119,8 +120,7 @@ const SortableItem = ({
           )}
         </div>
         <div className="text-sm text-muted-foreground mt-1">
-          Qty: {item.quantity} × ₹{item.price_per_unit.toFixed(2)} = ₹
-          {(item.quantity * item.price_per_unit).toFixed(2)}
+          Qty: {item.quantity} | Price: {formatPrice(item.price_per_unit)}
         </div>
       </div>
       <Button
@@ -211,7 +211,7 @@ const ListDetail = () => {
 
       if (data?.price) {
         setNewItemPrice(data.price.toString());
-        toast.success(`Price: ₹${data.price}`, {
+        toast.success(`Price: ${formatPrice(data.price)}`, {
           description: data.source === 'estimated' ? 'Estimated price' : 'From database'
         });
       } else {
@@ -297,7 +297,7 @@ const ListDetail = () => {
   }
 
   const totalCost = items.reduce(
-    (sum, item) => sum + item.quantity * item.price_per_unit,
+    (sum, item) => sum + item.price_per_unit,
     0
   );
   const completedCount = items.filter((item) => item.completed).length;
@@ -359,10 +359,10 @@ const ListDetail = () => {
               transition={{ duration: 0.5 }}
             >
               <span className={`text-3xl font-bold ${isOverBudget ? "text-destructive" : ""}`}>
-                ₹{totalCost.toFixed(2)}
+                {formatPrice(totalCost)}
               </span>
               {list.budget > 0 && (
-                <span className="text-muted-foreground">/ ₹{list.budget.toFixed(2)}</span>
+                <span className="text-muted-foreground">/ {formatPrice(list.budget)}</span>
               )}
             </motion.div>
             {isOverBudget && (
@@ -372,7 +372,7 @@ const ListDetail = () => {
                 className="flex items-center gap-1 text-destructive text-sm mt-2"
               >
                 <AlertCircle className="h-4 w-4" />
-                Oops! Over budget by ₹{(totalCost - list.budget).toFixed(2)}! 😅
+                Oops! Over budget by {formatPrice(totalCost - list.budget)}! 😅
               </motion.div>
             )}
           </CardContent>
