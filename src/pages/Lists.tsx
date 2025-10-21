@@ -37,6 +37,27 @@ const Lists = () => {
 
   useEffect(() => {
     fetchLists();
+
+    // Subscribe to realtime updates for list shares
+    const channel = supabase
+      .channel('list-shares-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'list_shares'
+        },
+        () => {
+          // Refetch lists when shares change
+          fetchLists();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchLists = async () => {

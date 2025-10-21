@@ -13,7 +13,7 @@ import {
   Trash2,
   Check,
   Circle,
-  DollarSign,
+  IndianRupee,
   Sparkles,
   AlertCircle,
   GripVertical,

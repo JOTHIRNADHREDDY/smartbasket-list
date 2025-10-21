@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit2, Calendar, DollarSign, Share2, Users } from "lucide-react";
+import { Trash2, Edit2, Calendar, IndianRupee, Share2, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -133,7 +133,7 @@ const ListCard = ({ list, onDelete }: ListCardProps) => {
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-border">
             <div className="flex items-center gap-1 text-sm">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
               <span className="font-semibold">{formatPrice(list.totalCost || 0)}</span>
               {list.budget > 0 && (
                 <span className="text-muted-foreground">
