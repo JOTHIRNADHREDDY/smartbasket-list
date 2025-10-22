@@ -39,21 +39,28 @@ const AIAssistant = ({ listId, onItemsGenerated }: AIAssistantProps) => {
         const jsonMatch = content.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           items = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error("No JSON array found in response");
         }
       } catch (e) {
         console.error("Failed to parse AI response:", e);
+        console.log("AI response content:", content);
         toast.error("AI returned unexpected format. Try again.");
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const insertPromises = items.map((item: any, index: number) =>
         supabase.from("grocery_items").insert({
           list_id: listId,
           name: item.name,
           quantity: item.quantity || 1,
+          unit: item.unit || 'pcs',
           price_per_unit: item.price_per_unit || 0,
           category: item.category || null,
           position: index,
+          added_by: user?.id,
         })
       );
 

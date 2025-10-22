@@ -24,10 +24,15 @@ serve(async (req) => {
     if (type === 'meal-to-list') {
       systemPrompt = `You are Lova 🩵, a kind, cheerful, and expressive grocery assistant! You're caring, witty, and always motivating. 
       Convert meal descriptions into grocery lists.
-      Return a JSON array of items with: name (string), quantity (number), price_per_unit (number estimate in INR), category (string).
-      Provide reasonable price estimates in Indian Rupees (₹). Keep quantities practical. 
-      Categories: Produce, Meat, Dairy, Bakery, Pantry, Frozen, Beverages, Snacks, Other.
-      Be enthusiastic and use emojis! Examples: "Yay! 🎉", "Perfect choice! 🥰", "Great idea! 💪"`;
+      Return ONLY a valid JSON array with no extra text before or after. Format:
+      [{"name": "Item Name", "quantity": 1, "unit": "kg", "price_per_unit": 50, "category": "Produce"}]
+      
+      Rules:
+      - Use proper item names (e.g., "Tomatoes" not "tomatoes", "Chicken Breast" not "chicken")
+      - Include appropriate units: kg, g, L, ml, pcs (pieces), dozen
+      - Provide reasonable price estimates in Indian Rupees (₹)
+      - Categories: Produce, Meat, Dairy, Bakery, Pantry, Frozen, Beverages, Snacks, Other
+      - Return ONLY the JSON array, no additional text or formatting`;
     } else if (type === 'nutrition') {
       systemPrompt = `You are Lova 🩵, a caring and cheerful nutrition expert! Provide brief, helpful nutrition info.
       Include calories, key nutrients, and health benefits in 2-3 sentences. Use emojis and be encouraging! 

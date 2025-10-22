@@ -54,9 +54,14 @@ interface GroceryItem {
   id: string;
   name: string;
   quantity: number;
+  unit: string;
   price_per_unit: number;
   category: string | null;
   completed: boolean;
+  added_by: string | null;
+  added_by_profile?: {
+    full_name: string;
+  } | null;
 }
 
 interface GroceryList {
@@ -105,7 +110,7 @@ const SortableItem = ({
         onCheckedChange={() => onToggle(item.id, item.completed)}
       />
       <div className="flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span
             className={`font-medium ${
               item.completed ? "line-through text-muted-foreground" : ""
@@ -120,8 +125,13 @@ const SortableItem = ({
           )}
         </div>
         <div className="text-sm text-muted-foreground mt-1">
-          Qty: {item.quantity} | Price: {formatPrice(item.price_per_unit)}
+          Qty: {item.quantity} {item.unit} | Price: {formatPrice(item.price_per_unit)}
         </div>
+        {item.added_by_profile?.full_name && (
+          <div className="text-xs text-muted-foreground mt-0.5">
+            Added by: {item.added_by_profile.full_name}
+          </div>
+        )}
       </div>
       <Button
         variant="ghost"
@@ -141,10 +151,14 @@ const ListDetail = () => {
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [newItemQuantity, setNewItemQuantity] = useState("1");
+  const [newItemUnit, setNewItemUnit] = useState("pcs");
   const [newItemPrice, setNewItemPrice] = useState("");
   const [newItemCategory, setNewItemCategory] = useState("");
+  const [editBudget, setEditBudget] = useState("");
+  const [editShoppingDate, setEditShoppingDate] = useState("");
   const [fetchingPrice, setFetchingPrice] = useState(false);
 
   // Initialize sensors at the top (before any returns)
@@ -176,10 +190,28 @@ const ListDetail = () => {
         .from("grocery_items")
         .select("*")
         .eq("list_id", id)
+        .order("completed", { ascending: true })
         .order("position");
 
       if (itemsError) throw itemsError;
-      setItems(itemsData || []);
+      
+      // Fetch profile information for items with added_by
+      const itemsWithProfiles = await Promise.all(
+        (itemsData || []).map(async (item) => {
+          if (item.added_by) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", item.added_by)
+              .single();
+            
+            return { ...item, added_by_profile: profile };
+          }
+          return { ...item, added_by_profile: null };
+        })
+      );
+      
+      setItems(itemsWithProfiles as GroceryItem[]);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load list");
@@ -227,13 +259,17 @@ const ListDetail = () => {
 
   const handleAddItem = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { error } = await supabase.from("grocery_items").insert({
         list_id: id,
         name: newItemName,
         quantity: parseFloat(newItemQuantity),
+        unit: newItemUnit,
         price_per_unit: newItemPrice ? parseFloat(newItemPrice) : 0,
         category: newItemCategory || null,
         position: items.length,
+        added_by: user?.id,
       });
 
       if (error) throw error;
@@ -242,12 +278,34 @@ const ListDetail = () => {
       setDialogOpen(false);
       setNewItemName("");
       setNewItemQuantity("1");
+      setNewItemUnit("pcs");
       setNewItemPrice("");
       setNewItemCategory("");
       fetchListAndItems();
     } catch (error) {
       console.error("Error adding item:", error);
       toast.error("Failed to add item");
+    }
+  };
+
+  const handleUpdateList = async () => {
+    try {
+      const { error } = await supabase
+        .from("grocery_lists")
+        .update({
+          budget: editBudget ? parseFloat(editBudget) : 0,
+          shopping_date: editShoppingDate || null,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("List updated!");
+      setEditDialogOpen(false);
+      fetchListAndItems();
+    } catch (error) {
+      console.error("Error updating list:", error);
+      toast.error("Failed to update list");
     }
   };
 
@@ -333,7 +391,7 @@ const ListDetail = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">{list.name}</h1>
           {list.shopping_date && (
@@ -342,9 +400,57 @@ const ListDetail = () => {
             </p>
           )}
         </div>
-        <Button onClick={() => navigate("/lists")} variant="outline">
-          Back to Lists
-        </Button>
+        <div className="flex gap-2">
+          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditBudget(list.budget?.toString() || "");
+                  setEditShoppingDate(list.shopping_date || "");
+                }}
+              >
+                Edit List
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit List Details</DialogTitle>
+                <DialogDescription>Update your list budget and shopping date</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editBudget">Total Budget (₹)</Label>
+                  <Input
+                    id="editBudget"
+                    type="number"
+                    step="0.01"
+                    placeholder="5000.00"
+                    value={editBudget}
+                    onChange={(e) => setEditBudget(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editShoppingDate">Shopping Date</Label>
+                  <Input
+                    id="editShoppingDate"
+                    type="date"
+                    value={editShoppingDate}
+                    onChange={(e) => setEditShoppingDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleUpdateList}>
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Button onClick={() => navigate("/lists")} variant="outline">
+            Back to Lists
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -434,7 +540,7 @@ const ListDetail = () => {
                       onChange={(e) => setNewItemName(e.target.value)}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="quantity">Quantity</Label>
                       <Input
@@ -443,6 +549,15 @@ const ListDetail = () => {
                         step="0.01"
                         value={newItemQuantity}
                         onChange={(e) => setNewItemQuantity(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="unit">Unit</Label>
+                      <Input
+                        id="unit"
+                        placeholder="kg, L, pcs"
+                        value={newItemUnit}
+                        onChange={(e) => setNewItemUnit(e.target.value)}
                       />
                     </div>
               <div className="space-y-2">

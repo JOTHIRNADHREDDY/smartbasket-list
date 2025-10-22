@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       grocery_items: {
         Row: {
+          added_by: string | null
           category: string | null
           completed: boolean
           created_at: string
@@ -30,6 +31,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          added_by?: string | null
           category?: string | null
           completed?: boolean
           created_at?: string
@@ -44,6 +46,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          added_by?: string | null
           category?: string | null
           completed?: boolean
           created_at?: string
