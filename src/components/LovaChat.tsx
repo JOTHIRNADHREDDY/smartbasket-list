@@ -95,36 +95,44 @@ const LovaChat = ({ listId, onItemsGenerated }: LovaChatProps) => {
 
       if (error) throw error;
 
-      const assistantMessage = {
-        role: "assistant" as const,
-        content: data.content,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-
-      // Check if response contains items to add
-      try {
-        const jsonMatch = data.content.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          const items = JSON.parse(jsonMatch[0]);
+      // Extract items from <ITEMS> tags if present
+      let displayContent = data.content;
+      const itemsMatch = data.content.match(/<ITEMS>([\s\S]*?)<\/ITEMS>/);
+      
+      if (itemsMatch) {
+        // Remove the <ITEMS> tags from display
+        displayContent = data.content.replace(/<ITEMS>[\s\S]*?<\/ITEMS>/g, '').trim();
+        
+        try {
+          const items = JSON.parse(itemsMatch[1]);
           if (Array.isArray(items) && items.length > 0) {
+            const { data: { user } } = await supabase.auth.getUser();
             const insertPromises = items.map((item: any, index: number) =>
               supabase.from("grocery_items").insert({
                 list_id: listId,
                 name: item.name,
                 quantity: item.quantity || 1,
+                unit: item.unit || 'pcs',
                 price_per_unit: item.price_per_unit || 0,
                 category: item.category || null,
                 position: index,
+                added_by: user?.id,
               })
             );
             await Promise.all(insertPromises);
             onItemsGenerated();
             toast.success(`Yay! Added ${items.length} items to your list! 🎉`);
           }
+        } catch (e) {
+          console.error("Failed to parse items:", e);
         }
-      } catch (e) {
-        // Not a list generation, just a chat response
       }
+
+      const assistantMessage = {
+        role: "assistant" as const,
+        content: displayContent,
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
       console.error("Error:", error);
       setMessages((prev) => [
