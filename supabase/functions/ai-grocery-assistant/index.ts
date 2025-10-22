@@ -29,7 +29,12 @@ serve(async (req) => {
       
       Rules:
       - Use proper item names (e.g., "Tomatoes" not "tomatoes", "Chicken Breast" not "chicken")
-      - Include appropriate units: kg, g, L, ml, pcs (pieces), dozen
+      - ALWAYS include appropriate units based on the item:
+        * kg or gm for vegetables, fruits, meat, grains, dry goods
+        * l or ml for liquids like milk, oil, juice, water
+        * pcs for individual items like bread, eggs (unless dozen)
+        * dozen for eggs, bananas when in dozens
+        * pack for packaged items like biscuits, chips, pasta boxes
       - Provide reasonable price estimates in Indian Rupees (₹)
       - Categories: Produce, Meat, Dairy, Bakery, Pantry, Frozen, Beverages, Snacks, Other
       - Return ONLY the JSON array, no additional text or formatting`;
@@ -50,8 +55,15 @@ serve(async (req) => {
       - If someone asks for meal-to-list conversion, return a JSON array with items
       - Always be enthusiastic: "Yay! 🎉", "Oops! 😅", "Great job! 💪", "Perfect! 🥰"
       
-      When generating lists, use this format:
-      [{"name": "item", "quantity": 1, "price_per_unit": 50, "category": "Produce"}]
+      When generating lists, use this format with PROPER UNITS:
+      [{"name": "item", "quantity": 1, "unit": "kg", "price_per_unit": 50, "category": "Produce"}]
+      
+      Unit guidelines:
+      - kg/gm for vegetables, fruits, meat, grains
+      - l/ml for liquids (milk, oil, juice)
+      - pcs for individual items
+      - dozen for eggs or items sold by dozen
+      - pack for packaged items
       
       Prices should be in Indian Rupees (₹). Be friendly and conversational!`;
     }

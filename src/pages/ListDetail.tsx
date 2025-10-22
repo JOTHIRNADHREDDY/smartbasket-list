@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -355,7 +356,7 @@ const ListDetail = () => {
   }
 
   const totalCost = items.reduce(
-    (sum, item) => sum + item.price_per_unit,
+    (sum, item) => sum + (item.price_per_unit * item.quantity),
     0
   );
   const completedCount = items.filter((item) => item.completed).length;
@@ -553,12 +554,20 @@ const ListDetail = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="unit">Unit</Label>
-                      <Input
-                        id="unit"
-                        placeholder="kg, L, pcs"
-                        value={newItemUnit}
-                        onChange={(e) => setNewItemUnit(e.target.value)}
-                      />
+                      <Select value={newItemUnit} onValueChange={setNewItemUnit}>
+                        <SelectTrigger id="unit">
+                          <SelectValue placeholder="Select unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pcs">Pieces (pcs)</SelectItem>
+                          <SelectItem value="kg">Kilogram (kg)</SelectItem>
+                          <SelectItem value="gm">Gram (gm)</SelectItem>
+                          <SelectItem value="l">Liter (l)</SelectItem>
+                          <SelectItem value="ml">Milliliter (ml)</SelectItem>
+                          <SelectItem value="dozen">Dozen</SelectItem>
+                          <SelectItem value="pack">Pack</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
               <div className="space-y-2">
                 <Label htmlFor="price">Price per Unit</Label>
