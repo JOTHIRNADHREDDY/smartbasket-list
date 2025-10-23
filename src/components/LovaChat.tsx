@@ -107,24 +107,45 @@ const LovaChat = ({ listId, onItemsGenerated }: LovaChatProps) => {
           const items = JSON.parse(itemsMatch[1]);
           if (Array.isArray(items) && items.length > 0) {
             const { data: { user } } = await supabase.auth.getUser();
-            const insertPromises = items.map((item: any, index: number) =>
-              supabase.from("grocery_items").insert({
-                list_id: listId,
-                name: item.name,
-                quantity: item.quantity || 1,
-                unit: item.unit || 'pcs',
-                price_per_unit: item.price_per_unit || 0,
-                category: item.category || null,
-                position: index,
-                added_by: user?.id,
-              })
+            
+            // Validate that all items have required fields including unit
+            const validItems = items.filter(item => 
+              item.name && 
+              item.quantity && 
+              item.unit && 
+              item.price_per_unit !== undefined && 
+              item.category
             );
-            await Promise.all(insertPromises);
-            onItemsGenerated();
-            toast.success(`Yay! Added ${items.length} items to your list! 🎉`);
+            
+            if (validItems.length === 0) {
+              console.error("No valid items found - missing required fields");
+              toast.error("Oops! 😅 Could not add items. Please try again!");
+            } else {
+              const insertPromises = validItems.map((item: any, index: number) =>
+                supabase.from("grocery_items").insert({
+                  list_id: listId,
+                  name: item.name,
+                  quantity: item.quantity,
+                  unit: item.unit,
+                  price_per_unit: item.price_per_unit,
+                  category: item.category,
+                  position: index,
+                  added_by: user?.id,
+                })
+              );
+              await Promise.all(insertPromises);
+              onItemsGenerated();
+              toast.success(`Yay! Added ${validItems.length} items to your list! 🎉`);
+              
+              // Log if some items were filtered out
+              if (validItems.length < items.length) {
+                console.warn(`Filtered out ${items.length - validItems.length} items with missing fields`);
+              }
+            }
           }
         } catch (e) {
-          console.error("Failed to parse items:", e);
+          console.error("Failed to parse items JSON:", e, "Content:", itemsMatch[1]);
+          toast.error("Oops! 😅 Had trouble parsing the items. Please try again!");
         }
       }
 

@@ -54,24 +54,35 @@ serve(async (req) => {
       - Give budget tips and healthier alternatives when asked
       - Always be enthusiastic: "Yay! 🎉", "Oops! 😅", "Great job! 💪", "Perfect! 🥰"
       
-      When someone asks you to generate a shopping list from meals:
-      1. First, write a friendly conversational response about what you're adding
-      2. Then on a new line, add the JSON array wrapped in <ITEMS> tags like this:
-         <ITEMS>[{"name": "Tomatoes", "quantity": 1, "unit": "kg", "price_per_unit": 50, "category": "Produce"}]</ITEMS>
+      CRITICAL FORMAT RULES FOR SHOPPING LISTS:
+      When someone asks you to generate a shopping list from meals or ingredients, you MUST follow this EXACT format:
       
-      Example response:
-      "Great choices! 🥰 I've added all the ingredients for your delicious meals! Here's what you'll need for spaghetti carbonara, chicken stir fry, and tacos! 🛒✨
+      1. Write 2-3 friendly sentences about the meals (NO JSON visible here)
+      2. Add a blank line
+      3. Add <ITEMS> opening tag
+      4. Add the JSON array (all items in ONE line, compact format)
+      5. Add </ITEMS> closing tag
       
-      <ITEMS>[{"name": "Spaghetti Pasta", "quantity": 500, "unit": "gm", "price_per_unit": 80, "category": "Pantry"}, {"name": "Bacon", "quantity": 200, "unit": "gm", "price_per_unit": 150, "category": "Meat"}]</ITEMS>"
+      EVERY item in the JSON MUST have ALL these fields:
+      - "name": proper capitalized name (e.g., "Chicken Breast", "Tomatoes")
+      - "quantity": number (e.g., 1, 500, 2)
+      - "unit": MANDATORY unit from the list below
+      - "price_per_unit": estimated price in Indian Rupees
+      - "category": one of (Produce, Meat, Dairy, Bakery, Pantry, Frozen, Beverages, Snacks, Other)
       
-      Unit guidelines:
-      - kg/gm for vegetables, fruits, meat, grains
-      - l/ml for liquids (milk, oil, juice)
-      - pcs for individual items
-      - dozen for eggs or items sold by dozen
-      - pack for packaged items
+      UNIT RULES (EVERY ITEM MUST HAVE A UNIT):
+      - Vegetables, fruits, meat, grains, flour, rice, spices: kg or gm (e.g., "1 kg", "500 gm")
+      - Liquids (milk, oil, juice, water, ghee): l or ml (e.g., "1 l", "500 ml")
+      - Individual items (bread, eggs if not dozen): pcs (e.g., "1 pcs", "6 pcs")
+      - Eggs in dozens, bananas in dozens: dozen (e.g., "1 dozen")
+      - Packaged items (biscuits, chips, pasta boxes, cookies): pack (e.g., "1 pack", "2 pack")
       
-      Prices should be in Indian Rupees (₹). Be friendly and conversational!`;
+      CORRECT Example:
+      "Amazing! 🎉 I've added everything you need for spaghetti carbonara, chicken curry, and tacos! Let's get cooking! 🛒✨
+      
+      <ITEMS>[{"name":"Spaghetti Pasta","quantity":500,"unit":"gm","price_per_unit":80,"category":"Pantry"},{"name":"Chicken Breast","quantity":1,"unit":"kg","price_per_unit":250,"category":"Meat"},{"name":"Tomatoes","quantity":500,"unit":"gm","price_per_unit":40,"category":"Produce"},{"name":"Milk","quantity":1,"unit":"l","price_per_unit":60,"category":"Dairy"}]</ITEMS>"
+      
+      NEVER show raw JSON outside <ITEMS> tags. NEVER use code blocks. For general chat (not list generation), respond conversationally without <ITEMS> tags.`;
     }
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
