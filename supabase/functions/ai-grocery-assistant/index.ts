@@ -35,7 +35,7 @@ serve(async (req) => {
         * pcs for individual items like bread, eggs (unless dozen)
         * dozen for eggs, bananas when in dozens
         * pack for packaged items like biscuits, chips, pasta boxes
-      - Provide reasonable price estimates in Indian Rupees (₹)
+      - Provide reasonable TOTAL price estimates for the quantity specified in Indian Rupees (₹)
       - Categories: Produce, Meat, Dairy, Bakery, Pantry, Frozen, Beverages, Snacks, Other
       - Return ONLY the JSON array, no additional text or formatting`;
     } else if (type === 'nutrition') {
@@ -72,7 +72,7 @@ serve(async (req) => {
       - "name": proper capitalized name (e.g., "Chicken Breast", "Tomatoes")
       - "quantity": number (e.g., 1, 500, 2)
       - "unit": MANDATORY unit from the list below
-      - "price_per_unit": estimated price in Indian Rupees
+      - "price_per_unit": TOTAL price for this item (quantity × unit price) in Indian Rupees
       - "category": one of (Produce, Meat, Dairy, Bakery, Pantry, Frozen, Beverages, Snacks, Other)
       
       UNIT RULES (EVERY ITEM MUST HAVE A UNIT):

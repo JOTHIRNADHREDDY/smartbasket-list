@@ -222,7 +222,7 @@ const ListDetail = () => {
     }
   };
 
-  const fetchItemPrice = async (itemName: string) => {
+  const fetchItemPrice = async (itemName: string, quantity: number, unit: string) => {
     if (!itemName.trim()) {
       toast.error("Please enter an item name first");
       return;
@@ -230,9 +230,9 @@ const ListDetail = () => {
     
     setFetchingPrice(true);
     try {
-      console.log("Fetching price for:", itemName);
+      console.log("Fetching price for:", itemName, quantity, unit);
       const { data, error } = await supabase.functions.invoke('fetch-item-price', {
-        body: { itemName }
+        body: { itemName, quantity, unit }
       });
 
       console.log("Price response:", data, error);
@@ -570,7 +570,7 @@ const ListDetail = () => {
                       </Select>
                     </div>
               <div className="space-y-2">
-                <Label htmlFor="price">Price per Unit</Label>
+                <Label htmlFor="price">Total Price (₹)</Label>
                 <div className="flex gap-2">
                   <Input
                     id="price"
@@ -584,7 +584,7 @@ const ListDetail = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => fetchItemPrice(newItemName)}
+                    onClick={() => fetchItemPrice(newItemName, parseFloat(newItemQuantity) || 1, newItemUnit)}
                     disabled={!newItemName || fetchingPrice}
                     size="sm"
                     className="shrink-0"

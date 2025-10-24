@@ -11,9 +11,9 @@ serve(async (req) => {
   }
 
   try {
-    const { itemName } = await req.json();
+    const { itemName, quantity, unit } = await req.json();
     
-    console.log('Fetching price for item:', itemName);
+    console.log('Fetching price for item:', itemName, 'quantity:', quantity, unit);
 
     // Using USDA FoodData Central API for food prices (free API)
     // Note: This is a simplified example. In production, you might use:
@@ -48,14 +48,28 @@ serve(async (req) => {
     const firstFood = data.foods[0];
     const category = firstFood.foodCategory || 'General';
     
-    let basePrice = 3.99;
-    if (category.toLowerCase().includes('meat')) basePrice = 8.99;
-    else if (category.toLowerCase().includes('produce')) basePrice = 2.99;
-    else if (category.toLowerCase().includes('dairy')) basePrice = 4.49;
-    else if (category.toLowerCase().includes('bakery')) basePrice = 3.49;
+    let basePricePerKg = 80; // Default ₹80/kg
+    if (category.toLowerCase().includes('meat')) basePricePerKg = 250;
+    else if (category.toLowerCase().includes('produce')) basePricePerKg = 60;
+    else if (category.toLowerCase().includes('dairy')) basePricePerKg = 70;
+    else if (category.toLowerCase().includes('bakery')) basePricePerKg = 100;
     
-    const variance = (Math.random() - 0.5) * 2; // +/- $1
-    const finalPrice = Math.max(0.99, basePrice + variance);
+    const variance = (Math.random() - 0.5) * 20; // +/- ₹10
+    const pricePerKg = Math.max(30, basePricePerKg + variance);
+    
+    // Calculate total price based on quantity and unit
+    let finalPrice = pricePerKg;
+    if (unit === 'gm' || unit === 'g') {
+      finalPrice = (pricePerKg * quantity) / 1000;
+    } else if (unit === 'kg') {
+      finalPrice = pricePerKg * quantity;
+    } else if (unit === 'l' || unit === 'liter') {
+      finalPrice = pricePerKg * quantity; // Use similar pricing for liquids
+    } else if (unit === 'ml') {
+      finalPrice = (pricePerKg * quantity) / 1000;
+    } else if (unit === 'pcs' || unit === 'dozen' || unit === 'pack') {
+      finalPrice = (pricePerKg / 2) * quantity; // Approximate for pieces
+    }
     
     console.log('Price fetched successfully:', finalPrice);
 
