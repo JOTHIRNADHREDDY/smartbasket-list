@@ -356,7 +356,7 @@ const ListDetail = () => {
   }
 
   const totalCost = items.reduce(
-    (sum, item) => sum + (item.price_per_unit * item.quantity),
+    (sum, item) => sum + item.price_per_unit,
     0
   );
   const completedCount = items.filter((item) => item.completed).length;
