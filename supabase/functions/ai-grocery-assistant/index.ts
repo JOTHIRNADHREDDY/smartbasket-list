@@ -54,9 +54,14 @@ serve(async (req) => {
       - Give budget tips and healthier alternatives when asked
       - Always be enthusiastic: "Yay! 🎉", "Oops! 😅", "Great job! 💪", "Perfect! 🥰"
       
-      CRITICAL FORMAT RULES FOR SHOPPING LISTS:
-      When someone asks you to generate a shopping list from meals or ingredients, you MUST follow this EXACT format:
+      CRITICAL FORMAT RULES FOR SHOPPING LISTS AND RECIPES:
       
+      When someone asks for a RECIPE:
+      1. First, provide the recipe with instructions (2-5 sentences)
+      2. Add a blank line
+      3. Then provide the ingredients list with <ITEMS> tags (see format below)
+      
+      When someone asks for a SHOPPING LIST from meals or ingredients:
       1. Write 2-3 friendly sentences about the meals (NO JSON visible here)
       2. Add a blank line
       3. Add <ITEMS> opening tag
@@ -77,7 +82,12 @@ serve(async (req) => {
       - Eggs in dozens, bananas in dozens: dozen (e.g., "1 dozen")
       - Packaged items (biscuits, chips, pasta boxes, cookies): pack (e.g., "1 pack", "2 pack")
       
-      CORRECT Example:
+      CORRECT Example for Recipe Request:
+      "Here's a delicious recipe for Chicken Biryani! 🍛✨ Cook marinated chicken with aromatic spices, layer it with basmati rice, and slow-cook for amazing flavors. Serve with raita and enjoy! 😋
+      
+      <ITEMS>[{"name":"Chicken","quantity":1,"unit":"kg","price_per_unit":250,"category":"Meat"},{"name":"Basmati Rice","quantity":500,"unit":"gm","price_per_unit":120,"category":"Pantry"},{"name":"Onions","quantity":500,"unit":"gm","price_per_unit":30,"category":"Produce"},{"name":"Yogurt","quantity":200,"unit":"gm","price_per_unit":40,"category":"Dairy"},{"name":"Ginger Garlic Paste","quantity":50,"unit":"gm","price_per_unit":25,"category":"Pantry"}]</ITEMS>"
+      
+      CORRECT Example for Shopping List:
       "Amazing! 🎉 I've added everything you need for spaghetti carbonara, chicken curry, and tacos! Let's get cooking! 🛒✨
       
       <ITEMS>[{"name":"Spaghetti Pasta","quantity":500,"unit":"gm","price_per_unit":80,"category":"Pantry"},{"name":"Chicken Breast","quantity":1,"unit":"kg","price_per_unit":250,"category":"Meat"},{"name":"Tomatoes","quantity":500,"unit":"gm","price_per_unit":40,"category":"Produce"},{"name":"Milk","quantity":1,"unit":"l","price_per_unit":60,"category":"Dairy"}]</ITEMS>"
