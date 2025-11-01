@@ -106,8 +106,13 @@ const Lists = () => {
 
   const handleCreateList = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error("Auth error:", userError);
+        toast.error("You must be logged in to create lists");
+        return;
+      }
 
       const { error } = await supabase.from("grocery_lists").insert({
         user_id: user.id,
@@ -116,7 +121,10 @@ const Lists = () => {
         shopping_date: newListDate || null,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Insert error:", error);
+        throw error;
+      }
 
       toast.success("List created!");
       setDialogOpen(false);
@@ -126,7 +134,7 @@ const Lists = () => {
       fetchLists();
     } catch (error) {
       console.error("Error creating list:", error);
-      toast.error("Failed to create list");
+      toast.error("Failed to create list. Please try again.");
     }
   };
 
