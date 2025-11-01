@@ -18,9 +18,20 @@ const Auth = () => {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate("/");
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          // Clear invalid session
+          await supabase.auth.signOut();
+          return;
+        }
+        if (session) {
+          navigate("/");
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        // Clear any corrupted session data
+        await supabase.auth.signOut();
       }
     };
     checkUser();

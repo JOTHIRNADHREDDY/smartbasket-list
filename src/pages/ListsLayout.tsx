@@ -13,22 +13,43 @@ const ListsLayout = () => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (!session) {
+      async (event, session) => {
+        if (event === 'TOKEN_REFRESHED') {
+          setSession(session);
+          setUser(session?.user ?? null);
+        } else if (event === 'SIGNED_OUT' || !session) {
+          setSession(null);
+          setUser(null);
           navigate("/auth");
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
         }
         setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        // Clear invalid session
+        await supabase.auth.signOut();
+        setSession(null);
+        setUser(null);
+        navigate("/auth");
+        setLoading(false);
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       if (!session) {
         navigate("/auth");
       }
+      setLoading(false);
+    }).catch(async (error) => {
+      console.error("Session error:", error);
+      await supabase.auth.signOut();
+      navigate("/auth");
       setLoading(false);
     });
 
