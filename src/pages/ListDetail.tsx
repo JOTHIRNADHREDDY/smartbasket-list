@@ -18,6 +18,8 @@ import {
   Sparkles,
   AlertCircle,
   GripVertical,
+  Pencil,
+  Apple,
 } from "lucide-react";
 import {
   Dialog,
@@ -76,11 +78,15 @@ interface GroceryList {
 const SortableItem = ({ 
   item, 
   onToggle, 
-  onDelete 
+  onDelete,
+  onEdit,
+  onShowNutrition
 }: { 
   item: GroceryItem; 
   onToggle: (id: string, completed: boolean) => void;
   onDelete: (id: string) => void;
+  onEdit: (item: GroceryItem) => void;
+  onShowNutrition: (itemName: string) => void;
 }) => {
   const {
     attributes,
@@ -101,7 +107,7 @@ const SortableItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent/5 transition-colors"
+      className="flex items-center gap-2 p-4 rounded-lg border border-border hover:bg-accent/5 transition-colors"
     >
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
@@ -134,13 +140,32 @@ const SortableItem = ({
           </div>
         )}
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onDelete(item.id)}
-      >
-        <Trash2 className="h-4 w-4 text-destructive" />
-      </Button>
+      <div className="flex gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onShowNutrition(item.name)}
+          title="View nutrition info"
+        >
+          <Apple className="h-4 w-4 text-green-600" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onEdit(item)}
+          title="Edit item"
+        >
+          <Pencil className="h-4 w-4 text-blue-600" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onDelete(item.id)}
+          title="Delete item"
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
     </div>
   );
 };
@@ -158,6 +183,10 @@ const ListDetail = () => {
   const [newItemUnit, setNewItemUnit] = useState("pcs");
   const [newItemPrice, setNewItemPrice] = useState("");
   const [newItemCategory, setNewItemCategory] = useState("");
+  const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
+  const [editItemDialogOpen, setEditItemDialogOpen] = useState(false);
+  const [nutritionInfo, setNutritionInfo] = useState<string>("");
+  const [nutritionDialogOpen, setNutritionDialogOpen] = useState(false);
   const [editBudget, setEditBudget] = useState("");
   const [editShoppingDate, setEditShoppingDate] = useState("");
   const [fetchingPrice, setFetchingPrice] = useState(false);
@@ -259,15 +288,26 @@ const ListDetail = () => {
   };
 
   const handleAddItem = async () => {
+    if (!newItemName) return;
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      const priceValue = parseFloat(newItemPrice) || 0;
+      
+      console.log("Adding item:", {
+        name: newItemName,
+        quantity: parseFloat(newItemQuantity) || 1,
+        unit: newItemUnit,
+        price_per_unit: priceValue,
+      });
+
       const { error } = await supabase.from("grocery_items").insert({
         list_id: id,
         name: newItemName,
-        quantity: parseFloat(newItemQuantity),
+        quantity: parseFloat(newItemQuantity) || 1,
         unit: newItemUnit,
-        price_per_unit: newItemPrice ? parseFloat(newItemPrice) : 0,
+        price_per_unit: priceValue,
         category: newItemCategory || null,
         position: items.length,
         added_by: user?.id,
@@ -275,7 +315,7 @@ const ListDetail = () => {
 
       if (error) throw error;
 
-      toast.success("Item added!");
+      toast.success("Item added! 🎉");
       setDialogOpen(false);
       setNewItemName("");
       setNewItemQuantity("1");
@@ -286,6 +326,77 @@ const ListDetail = () => {
     } catch (error) {
       console.error("Error adding item:", error);
       toast.error("Failed to add item");
+    }
+  };
+
+  const handleEditItem = async () => {
+    if (!editingItem || !newItemName) return;
+
+    try {
+      const priceValue = parseFloat(newItemPrice) || 0;
+      
+      console.log("Updating item:", {
+        name: newItemName,
+        quantity: parseFloat(newItemQuantity) || 1,
+        unit: newItemUnit,
+        price_per_unit: priceValue,
+      });
+
+      const { error } = await supabase
+        .from("grocery_items")
+        .update({
+          name: newItemName,
+          quantity: parseFloat(newItemQuantity) || 1,
+          unit: newItemUnit,
+          price_per_unit: priceValue,
+          category: newItemCategory || null,
+        })
+        .eq("id", editingItem.id);
+
+      if (error) throw error;
+
+      toast.success("Item updated! ✨");
+      setEditItemDialogOpen(false);
+      setEditingItem(null);
+      setNewItemName("");
+      setNewItemQuantity("1");
+      setNewItemUnit("pcs");
+      setNewItemPrice("");
+      setNewItemCategory("");
+      fetchListAndItems();
+    } catch (error) {
+      console.error("Error updating item:", error);
+      toast.error("Failed to update item");
+    }
+  };
+
+  const openEditDialog = (item: GroceryItem) => {
+    setEditingItem(item);
+    setNewItemName(item.name);
+    setNewItemQuantity(item.quantity.toString());
+    setNewItemUnit(item.unit);
+    setNewItemPrice(item.price_per_unit.toString());
+    setNewItemCategory(item.category || "");
+    setEditItemDialogOpen(true);
+  };
+
+  const fetchNutritionInfo = async (itemName: string) => {
+    setNutritionDialogOpen(true);
+    setNutritionInfo("Loading nutrition info... 🔍");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-grocery-assistant", {
+        body: {
+          prompt: `Tell me about the nutrition information for ${itemName}`,
+          type: "nutrition",
+        },
+      });
+
+      if (error) throw error;
+      setNutritionInfo(data.content);
+    } catch (error) {
+      console.error("Error fetching nutrition info:", error);
+      setNutritionInfo("Oops! 😅 Couldn't fetch nutrition info. Please try again.");
     }
   };
 
@@ -618,6 +729,113 @@ const ListDetail = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            {/* Edit Item Dialog */}
+            <Dialog open={editItemDialogOpen} onOpenChange={setEditItemDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Item</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name">Item Name</Label>
+                    <Input
+                      id="edit-name"
+                      placeholder="e.g., Tomatoes"
+                      value={newItemName}
+                      onChange={(e) => setNewItemName(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-quantity">Quantity</Label>
+                      <Input
+                        id="edit-quantity"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={newItemQuantity}
+                        onChange={(e) => setNewItemQuantity(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-unit">Unit</Label>
+                      <Select value={newItemUnit} onValueChange={setNewItemUnit}>
+                        <SelectTrigger id="edit-unit">
+                          <SelectValue placeholder="Select unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pcs">Pieces (pcs)</SelectItem>
+                          <SelectItem value="kg">Kilogram (kg)</SelectItem>
+                          <SelectItem value="gm">Gram (gm)</SelectItem>
+                          <SelectItem value="l">Liter (l)</SelectItem>
+                          <SelectItem value="ml">Milliliter (ml)</SelectItem>
+                          <SelectItem value="dozen">Dozen</SelectItem>
+                          <SelectItem value="pack">Pack</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-price">Total Price (₹)</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="edit-price"
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={newItemPrice}
+                          onChange={(e) => setNewItemPrice(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fetchItemPrice(newItemName, parseFloat(newItemQuantity) || 1, newItemUnit)}
+                          disabled={!newItemName || fetchingPrice}
+                          size="sm"
+                          className="shrink-0"
+                        >
+                          {fetchingPrice ? (
+                            <Sparkles className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4 mr-1" />
+                              Auto
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-category">Category (optional)</Label>
+                    <Input
+                      id="edit-category"
+                      placeholder="Produce, Dairy, etc."
+                      value={newItemCategory}
+                      onChange={(e) => setNewItemCategory(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleEditItem} disabled={!newItemName}>
+                    Update Item
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Nutrition Info Dialog */}
+            <Dialog open={nutritionDialogOpen} onOpenChange={setNutritionDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Nutrition Information</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  <p className="text-sm whitespace-pre-wrap">{nutritionInfo}</p>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </CardHeader>
         <CardContent>
@@ -647,6 +865,8 @@ const ListDetail = () => {
                       item={item} 
                       onToggle={handleToggleItem}
                       onDelete={handleDeleteItem}
+                      onEdit={openEditDialog}
+                      onShowNutrition={fetchNutritionInfo}
                     />
                   ))}
                 </div>
