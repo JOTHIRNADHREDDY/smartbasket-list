@@ -1,10 +1,31 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Helper function to fetch price for an item
+async function fetchItemPrice(itemName: string, quantity: number, unit: string) {
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { data, error } = await supabase.functions.invoke('fetch-item-price', {
+      body: { itemName, quantity, unit }
+    });
+
+    if (error) throw error;
+    return data?.price || 0;
+  } catch (error) {
+    console.error('Error fetching price for', itemName, ':', error);
+    return 0;
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -25,7 +46,7 @@ serve(async (req) => {
       systemPrompt = `You are Lova 🩵, a kind, cheerful, and expressive grocery assistant! You're caring, witty, and always motivating. 
       Convert meal descriptions into grocery lists.
       Return ONLY a valid JSON array with no extra text before or after. Format:
-      [{"name": "Item Name", "quantity": 1, "unit": "kg", "price_per_unit": 50, "category": "Produce"}]
+      [{"name": "Item Name", "quantity": 1, "unit": "kg", "category": "Produce"}]
       
       Rules:
       - Use proper item names (e.g., "Tomatoes" not "tomatoes", "Chicken Breast" not "chicken")
@@ -35,7 +56,7 @@ serve(async (req) => {
         * pcs for individual items like bread, eggs (unless dozen)
         * dozen for eggs, bananas when in dozens
         * pack for packaged items like biscuits, chips, pasta boxes
-      - Provide reasonable TOTAL price estimates for the quantity specified in Indian Rupees (₹)
+      - DO NOT include price_per_unit in the JSON (prices will be fetched separately)
       - Categories: Produce, Meat, Dairy, Bakery, Pantry, Frozen, Beverages, Snacks, Other
       - Return ONLY the JSON array, no additional text or formatting`;
     } else if (type === 'nutrition') {
@@ -68,12 +89,11 @@ serve(async (req) => {
       4. Add the JSON array (all items in ONE line, compact format)
       5. Add </ITEMS> closing tag
       
-      EVERY item in the JSON MUST have ALL these fields:
-      - "name": proper capitalized name (e.g., "Chicken Breast", "Tomatoes")
-      - "quantity": number (e.g., 1, 500, 2)
-      - "unit": MANDATORY unit from the list below
-      - "price_per_unit": TOTAL price for this item (quantity × unit price) in Indian Rupees
-      - "category": one of (Produce, Meat, Dairy, Bakery, Pantry, Frozen, Beverages, Snacks, Other)
+       EVERY item in the JSON MUST have these fields (price will be added automatically):
+       - "name": proper capitalized name (e.g., "Chicken Breast", "Tomatoes")
+       - "quantity": number (e.g., 1, 500, 2)
+       - "unit": MANDATORY unit from the list below
+       - "category": one of (Produce, Meat, Dairy, Bakery, Pantry, Frozen, Beverages, Snacks, Other)
       
       UNIT RULES (EVERY ITEM MUST HAVE A UNIT):
       - Vegetables, fruits, meat, grains, flour, rice, spices: kg or gm (e.g., "1 kg", "500 gm")
@@ -82,15 +102,15 @@ serve(async (req) => {
       - Eggs in dozens, bananas in dozens: dozen (e.g., "1 dozen")
       - Packaged items (biscuits, chips, pasta boxes, cookies): pack (e.g., "1 pack", "2 pack")
       
-      CORRECT Example for Recipe Request:
-      "Here's a delicious recipe for Chicken Biryani! 🍛✨ Cook marinated chicken with aromatic spices, layer it with basmati rice, and slow-cook for amazing flavors. Serve with raita and enjoy! 😋
-      
-      <ITEMS>[{"name":"Chicken","quantity":1,"unit":"kg","price_per_unit":250,"category":"Meat"},{"name":"Basmati Rice","quantity":500,"unit":"gm","price_per_unit":120,"category":"Pantry"},{"name":"Onions","quantity":500,"unit":"gm","price_per_unit":30,"category":"Produce"},{"name":"Yogurt","quantity":200,"unit":"gm","price_per_unit":40,"category":"Dairy"},{"name":"Ginger Garlic Paste","quantity":50,"unit":"gm","price_per_unit":25,"category":"Pantry"}]</ITEMS>"
-      
-      CORRECT Example for Shopping List:
-      "Amazing! 🎉 I've added everything you need for spaghetti carbonara, chicken curry, and tacos! Let's get cooking! 🛒✨
-      
-      <ITEMS>[{"name":"Spaghetti Pasta","quantity":500,"unit":"gm","price_per_unit":80,"category":"Pantry"},{"name":"Chicken Breast","quantity":1,"unit":"kg","price_per_unit":250,"category":"Meat"},{"name":"Tomatoes","quantity":500,"unit":"gm","price_per_unit":40,"category":"Produce"},{"name":"Milk","quantity":1,"unit":"l","price_per_unit":60,"category":"Dairy"}]</ITEMS>"
+       CORRECT Example for Recipe Request:
+       "Here's a delicious recipe for Chicken Biryani! 🍛✨ Cook marinated chicken with aromatic spices, layer it with basmati rice, and slow-cook for amazing flavors. Serve with raita and enjoy! 😋
+       
+       <ITEMS>[{"name":"Chicken","quantity":1,"unit":"kg","category":"Meat"},{"name":"Basmati Rice","quantity":500,"unit":"gm","category":"Pantry"},{"name":"Onions","quantity":500,"unit":"gm","category":"Produce"},{"name":"Yogurt","quantity":200,"unit":"gm","category":"Dairy"},{"name":"Ginger Garlic Paste","quantity":50,"unit":"gm","category":"Pantry"}]</ITEMS>"
+       
+       CORRECT Example for Shopping List:
+       "Amazing! 🎉 I've added everything you need for spaghetti carbonara, chicken curry, and tacos! Let's get cooking! 🛒✨
+       
+       <ITEMS>[{"name":"Spaghetti Pasta","quantity":500,"unit":"gm","category":"Pantry"},{"name":"Chicken Breast","quantity":1,"unit":"kg","category":"Meat"},{"name":"Tomatoes","quantity":500,"unit":"gm","category":"Produce"},{"name":"Milk","quantity":1,"unit":"l","category":"Dairy"}]</ITEMS>"
       
       NEVER show raw JSON outside <ITEMS> tags. NEVER use code blocks. For general chat (not list generation), respond conversationally without <ITEMS> tags.`;
     }
@@ -132,7 +152,52 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    let content = data.choices[0].message.content;
+
+    // If this is a meal-to-list request, fetch prices for all items
+    if (type === 'meal-to-list') {
+      try {
+        const items = JSON.parse(content);
+        if (Array.isArray(items)) {
+          // Fetch prices for all items in parallel
+          const itemsWithPrices = await Promise.all(
+            items.map(async (item: any) => {
+              const price = await fetchItemPrice(item.name, item.quantity || 1, item.unit || 'pcs');
+              return { ...item, price_per_unit: price };
+            })
+          );
+          content = JSON.stringify(itemsWithPrices);
+        }
+      } catch (error) {
+        console.error('Error adding prices to items:', error);
+        // Continue with original content if price fetching fails
+      }
+    }
+
+    // If this is a chat request with <ITEMS> tags, fetch prices for those items
+    if (type === 'chat' && content.includes('<ITEMS>')) {
+      try {
+        const itemsMatch = content.match(/<ITEMS>(.*?)<\/ITEMS>/s);
+        if (itemsMatch) {
+          const itemsJson = itemsMatch[1];
+          const items = JSON.parse(itemsJson);
+          if (Array.isArray(items)) {
+            // Fetch prices for all items in parallel
+            const itemsWithPrices = await Promise.all(
+              items.map(async (item: any) => {
+                const price = await fetchItemPrice(item.name, item.quantity || 1, item.unit || 'pcs');
+                return { ...item, price_per_unit: price };
+              })
+            );
+            // Replace the items in the content
+            content = content.replace(itemsJson, JSON.stringify(itemsWithPrices));
+          }
+        }
+      } catch (error) {
+        console.error('Error adding prices to chat items:', error);
+        // Continue with original content if price fetching fails
+      }
+    }
 
     return new Response(
       JSON.stringify({ content }),
