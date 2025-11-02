@@ -1,6 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,17 +7,36 @@ const corsHeaders = {
 };
 
 // Helper function to fetch price for an item
-const fetchItemPrice = async (supabase: any, itemName: string, quantity: number, unit: string): Promise<number> => {
+const fetchItemPrice = async (itemName: string, quantity: number, unit: string): Promise<number> => {
   try {
-    const { data, error } = await supabase.functions.invoke('fetch-item-price', {
-      body: { itemName, quantity, unit }
-    });
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
     
-    if (error) {
-      console.error('Error fetching price:', error);
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
       return 0;
     }
     
+    console.log('Fetching price for:', itemName, quantity, unit);
+    
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/fetch-item-price`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ itemName, quantity, unit })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Price fetch error:', response.status, errorText);
+      return 0;
+    }
+    
+    const data = await response.json();
+    console.log('Price fetched:', data.price, 'for', itemName);
     return data?.price || 0;
   } catch (error) {
     console.error('Error in fetchItemPrice:', error);
@@ -154,22 +172,19 @@ serve(async (req) => {
     const data = await response.json();
     let content = data.choices[0].message.content;
 
-    // Initialize Supabase client for price fetching
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     // For meal-to-list, fetch prices for each item
     if (type === 'meal-to-list') {
       try {
         const items = JSON.parse(content);
+        console.log('Fetching prices for', items.length, 'items');
         const itemsWithPrices = await Promise.all(
           items.map(async (item: any) => {
-            const price = await fetchItemPrice(supabase, item.name, item.quantity, item.unit);
+            const price = await fetchItemPrice(item.name, item.quantity, item.unit);
             return { ...item, price_per_unit: price };
           })
         );
         content = JSON.stringify(itemsWithPrices);
+        console.log('Prices fetched successfully');
       } catch (error) {
         console.error('Error fetching prices for meal-to-list:', error);
       }
@@ -182,13 +197,15 @@ serve(async (req) => {
         if (itemsMatch) {
           const itemsJson = itemsMatch[1];
           const items = JSON.parse(itemsJson);
+          console.log('Fetching prices for', items.length, 'chat items');
           const itemsWithPrices = await Promise.all(
             items.map(async (item: any) => {
-              const price = await fetchItemPrice(supabase, item.name, item.quantity, item.unit);
+              const price = await fetchItemPrice(item.name, item.quantity, item.unit);
               return { ...item, price_per_unit: price };
             })
           );
           content = content.replace(itemsJson, JSON.stringify(itemsWithPrices));
+          console.log('Chat item prices fetched successfully');
         }
       } catch (error) {
         console.error('Error fetching prices for chat items:', error);
