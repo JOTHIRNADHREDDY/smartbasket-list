@@ -1,9 +1,29 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Helper function to fetch price for an item
+const fetchItemPrice = async (supabase: any, itemName: string, quantity: number, unit: string): Promise<number> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('fetch-item-price', {
+      body: { itemName, quantity, unit }
+    });
+    
+    if (error) {
+      console.error('Error fetching price:', error);
+      return 0;
+    }
+    
+    return data?.price || 0;
+  } catch (error) {
+    console.error('Error in fetchItemPrice:', error);
+    return 0;
+  }
 };
 
 serve(async (req) => {
@@ -25,7 +45,7 @@ serve(async (req) => {
       systemPrompt = `You are Lova 🩵, a kind, cheerful, and expressive grocery assistant! You're caring, witty, and always motivating. 
       Convert meal descriptions into grocery lists.
       Return ONLY a valid JSON array with no extra text before or after. Format:
-      [{"name": "Item Name", "quantity": 1, "unit": "kg", "price_per_unit": 50, "category": "Produce"}]
+      [{"name": "Item Name", "quantity": 1, "unit": "kg", "category": "Produce"}]
       
       Rules:
       - Use proper item names (e.g., "Tomatoes" not "tomatoes", "Chicken Breast" not "chicken")
@@ -35,9 +55,9 @@ serve(async (req) => {
         * pcs for individual items like bread, eggs (unless dozen)
         * dozen for eggs, bananas when in dozens
         * pack for packaged items like biscuits, chips, pasta boxes
-      - Provide reasonable TOTAL price estimates for the quantity specified in Indian Rupees (₹)
       - Categories: Produce, Meat, Dairy, Bakery, Pantry, Frozen, Beverages, Snacks, Other
-      - Return ONLY the JSON array, no additional text or formatting`;
+      - Return ONLY the JSON array, no additional text or formatting
+      - Do NOT include price_per_unit field (it will be fetched automatically)`;
     } else if (type === 'nutrition') {
       systemPrompt = `You are Lova 🩵, a caring and cheerful nutrition expert! Provide brief, helpful nutrition info.
       Include calories, key nutrients, and health benefits in 2-3 sentences. Use emojis and be encouraging! 
@@ -72,8 +92,8 @@ serve(async (req) => {
       - "name": proper capitalized name (e.g., "Chicken Breast", "Tomatoes")
       - "quantity": number (e.g., 1, 500, 2)
       - "unit": MANDATORY unit from the list below
-      - "price_per_unit": TOTAL price for this item (quantity × unit price) in Indian Rupees
       - "category": one of (Produce, Meat, Dairy, Bakery, Pantry, Frozen, Beverages, Snacks, Other)
+      - Do NOT include price_per_unit (it will be fetched automatically)
       
       UNIT RULES (EVERY ITEM MUST HAVE A UNIT):
       - Vegetables, fruits, meat, grains, flour, rice, spices: kg or gm (e.g., "1 kg", "500 gm")
@@ -85,12 +105,12 @@ serve(async (req) => {
       CORRECT Example for Recipe Request:
       "Here's a delicious recipe for Chicken Biryani! 🍛✨ Cook marinated chicken with aromatic spices, layer it with basmati rice, and slow-cook for amazing flavors. Serve with raita and enjoy! 😋
       
-      <ITEMS>[{"name":"Chicken","quantity":1,"unit":"kg","price_per_unit":250,"category":"Meat"},{"name":"Basmati Rice","quantity":500,"unit":"gm","price_per_unit":120,"category":"Pantry"},{"name":"Onions","quantity":500,"unit":"gm","price_per_unit":30,"category":"Produce"},{"name":"Yogurt","quantity":200,"unit":"gm","price_per_unit":40,"category":"Dairy"},{"name":"Ginger Garlic Paste","quantity":50,"unit":"gm","price_per_unit":25,"category":"Pantry"}]</ITEMS>"
+      <ITEMS>[{"name":"Chicken","quantity":1,"unit":"kg","category":"Meat"},{"name":"Basmati Rice","quantity":500,"unit":"gm","category":"Pantry"},{"name":"Onions","quantity":500,"unit":"gm","category":"Produce"},{"name":"Yogurt","quantity":200,"unit":"gm","category":"Dairy"},{"name":"Ginger Garlic Paste","quantity":50,"unit":"gm","category":"Pantry"}]</ITEMS>"
       
       CORRECT Example for Shopping List:
       "Amazing! 🎉 I've added everything you need for spaghetti carbonara, chicken curry, and tacos! Let's get cooking! 🛒✨
       
-      <ITEMS>[{"name":"Spaghetti Pasta","quantity":500,"unit":"gm","price_per_unit":80,"category":"Pantry"},{"name":"Chicken Breast","quantity":1,"unit":"kg","price_per_unit":250,"category":"Meat"},{"name":"Tomatoes","quantity":500,"unit":"gm","price_per_unit":40,"category":"Produce"},{"name":"Milk","quantity":1,"unit":"l","price_per_unit":60,"category":"Dairy"}]</ITEMS>"
+      <ITEMS>[{"name":"Spaghetti Pasta","quantity":500,"unit":"gm","category":"Pantry"},{"name":"Chicken Breast","quantity":1,"unit":"kg","category":"Meat"},{"name":"Tomatoes","quantity":500,"unit":"gm","category":"Produce"},{"name":"Milk","quantity":1,"unit":"l","category":"Dairy"}]</ITEMS>"
       
       NEVER show raw JSON outside <ITEMS> tags. NEVER use code blocks. For general chat (not list generation), respond conversationally without <ITEMS> tags.`;
     }
@@ -132,7 +152,48 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    let content = data.choices[0].message.content;
+
+    // Initialize Supabase client for price fetching
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // For meal-to-list, fetch prices for each item
+    if (type === 'meal-to-list') {
+      try {
+        const items = JSON.parse(content);
+        const itemsWithPrices = await Promise.all(
+          items.map(async (item: any) => {
+            const price = await fetchItemPrice(supabase, item.name, item.quantity, item.unit);
+            return { ...item, price_per_unit: price };
+          })
+        );
+        content = JSON.stringify(itemsWithPrices);
+      } catch (error) {
+        console.error('Error fetching prices for meal-to-list:', error);
+      }
+    }
+
+    // For chat responses with <ITEMS> tags, fetch prices for items
+    if (type === 'chat' && content.includes('<ITEMS>')) {
+      try {
+        const itemsMatch = content.match(/<ITEMS>(.*?)<\/ITEMS>/s);
+        if (itemsMatch) {
+          const itemsJson = itemsMatch[1];
+          const items = JSON.parse(itemsJson);
+          const itemsWithPrices = await Promise.all(
+            items.map(async (item: any) => {
+              const price = await fetchItemPrice(supabase, item.name, item.quantity, item.unit);
+              return { ...item, price_per_unit: price };
+            })
+          );
+          content = content.replace(itemsJson, JSON.stringify(itemsWithPrices));
+        }
+      } catch (error) {
+        console.error('Error fetching prices for chat items:', error);
+      }
+    }
 
     return new Response(
       JSON.stringify({ content }),
