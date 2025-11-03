@@ -138,20 +138,50 @@ const Lists = () => {
     }
   };
 
-  const handleDeleteList = async (id: string) => {
+  const handleDeleteList = async (id: string, isOwner: boolean) => {
     try {
-      const { error } = await supabase
-        .from("grocery_lists")
-        .delete()
-        .eq("id", id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      if (error) throw error;
+      if (isOwner) {
+        // Owner deletes the entire list
+        const { error } = await supabase
+          .from("grocery_lists")
+          .delete()
+          .eq("id", id);
 
-      toast.success("List deleted");
+        if (error) throw error;
+        toast.success("List deleted");
+      } else {
+        // Shared user leaves the list (deletes their share record)
+        // First get user's email
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .single();
+
+        if (!profile) throw new Error("Profile not found");
+
+        // Get user's email from auth
+        const email = user.email;
+        if (!email) throw new Error("Email not found");
+
+        // Delete the share record
+        const { error } = await supabase
+          .from("list_shares")
+          .delete()
+          .eq("list_id", id)
+          .eq("shared_with_email", email.toLowerCase());
+
+        if (error) throw error;
+        toast.success("Left shared list");
+      }
+
       fetchLists();
     } catch (error) {
       console.error("Error deleting list:", error);
-      toast.error("Failed to delete list");
+      toast.error(isOwner ? "Failed to delete list" : "Failed to leave list");
     }
   };
 

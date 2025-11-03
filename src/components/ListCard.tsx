@@ -18,7 +18,7 @@ interface ListCardProps {
     completedCount?: number;
     totalCost?: number;
   };
-  onDelete: (id: string) => void;
+  onDelete: (id: string, isOwner: boolean) => void;
 }
 
 const ListCard = ({ list, onDelete }: ListCardProps) => {
@@ -103,18 +103,17 @@ const ListCard = ({ list, onDelete }: ListCardProps) => {
               >
                 <Edit2 className="h-4 w-4" />
               </Button>
-              {isOwner && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(list.id);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(list.id, isOwner);
+                }}
+                title={isOwner ? "Delete list" : "Leave shared list"}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
             </div>
           </div>
         </CardHeader>
