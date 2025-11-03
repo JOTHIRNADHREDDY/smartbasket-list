@@ -51,16 +51,19 @@ const Analytics = ({ userId }: AnalyticsProps) => {
 
       console.log("🛒 Found items:", items.length);
 
-      // Calculate total spent - sum up all price_per_unit values
+      // Calculate total spent - only count completed items
       // Note: price_per_unit is the TOTAL price for the item (not per unit)
-      const totalSpent = items.reduce(
+      const completedItems = items.filter(item => item.completed);
+      const totalSpent = completedItems.reduce(
         (sum, item) => {
           const price = Number(item.price_per_unit) || 0;
-          console.log(`  ${item.name}: ₹${price}`);
+          console.log(`  ${item.name}: ₹${price} (completed: ${item.completed})`);
           return sum + price;
         },
         0
       );
+
+      console.log(`📊 Total items: ${items.length}, Completed: ${completedItems.length}`);
 
       console.log("💰 Total calculated:", totalSpent);
 

@@ -466,10 +466,15 @@ const ListDetail = () => {
     return <div>List not found</div>;
   }
 
-  // Calculate total cost - sum all price_per_unit values
-  // Note: price_per_unit stores the TOTAL price for the item, not price per unit
+  // Calculate estimated total cost - sum all price_per_unit values for all items
   const totalCost = items.reduce(
     (sum, item) => sum + (Number(item.price_per_unit) || 0),
+    0
+  );
+  
+  // Calculate actual spent - only completed items
+  const totalSpent = items.reduce(
+    (sum, item) => item.completed ? sum + (Number(item.price_per_unit) || 0) : sum,
     0
   );
   const completedCount = items.filter((item) => item.completed).length;
@@ -567,10 +572,10 @@ const ListDetail = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
+            <CardTitle className="text-sm font-medium">Estimated Total</CardTitle>
           </CardHeader>
           <CardContent>
             <motion.div
@@ -592,9 +597,21 @@ const ListDetail = () => {
                 className="flex items-center gap-1 text-destructive text-sm mt-2"
               >
                 <AlertCircle className="h-4 w-4" />
-                Oops! Over budget by {formatPrice(totalCost - list.budget)}! 😅
+                Over budget by {formatPrice(totalCost - list.budget)}! 😅
               </motion.div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-success">
+              {formatPrice(totalSpent)}
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">completed items</p>
           </CardContent>
         </Card>
 
