@@ -22,13 +22,20 @@ const Analytics = ({ userId }: AnalyticsProps) => {
 
   const fetchAnalytics = async () => {
     try {
+      console.log("🔍 Fetching analytics for user:", userId);
+      
       // Fetch all lists for user
       const { data: lists } = await supabase
         .from("grocery_lists")
         .select("id, budget")
         .eq("user_id", userId);
 
-      if (!lists) return;
+      if (!lists) {
+        console.log("No lists found");
+        return;
+      }
+
+      console.log("📋 Found lists:", lists.length);
 
       // Fetch all items for these lists
       const listIds = lists.map((l) => l.id);
@@ -37,21 +44,25 @@ const Analytics = ({ userId }: AnalyticsProps) => {
         .select("*")
         .in("list_id", listIds);
 
-      if (!items) return;
+      if (!items) {
+        console.log("No items found");
+        return;
+      }
 
-      // Calculate total spent - filter out items with unreasonably high prices (> 10000)
-      // This handles legacy data issues from when pricing wasn't working correctly
+      console.log("🛒 Found items:", items.length);
+
+      // Calculate total spent - sum up all price_per_unit values
+      // Note: price_per_unit is the TOTAL price for the item (not per unit)
       const totalSpent = items.reduce(
         (sum, item) => {
-          // Skip items with prices above 10000 (likely data errors)
-          if (item.price_per_unit > 10000) {
-            console.warn('Skipping item with unreasonably high price:', item.name, item.price_per_unit);
-            return sum;
-          }
-          return sum + item.price_per_unit;
+          const price = Number(item.price_per_unit) || 0;
+          console.log(`  ${item.name}: ₹${price}`);
+          return sum + price;
         },
         0
       );
+
+      console.log("💰 Total calculated:", totalSpent);
 
       setStats({
         totalSpent,
