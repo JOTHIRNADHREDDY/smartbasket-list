@@ -466,8 +466,17 @@ const ListDetail = () => {
     return <div>List not found</div>;
   }
 
+  // Calculate total cost - filter out items with unreasonably high prices (> 10000)
+  // This handles legacy data issues from when pricing wasn't working correctly
   const totalCost = items.reduce(
-    (sum, item) => sum + item.price_per_unit,
+    (sum, item) => {
+      // Skip items with prices above 10000 (likely data errors)
+      if (item.price_per_unit > 10000) {
+        console.warn('Skipping item with unreasonably high price:', item.name, item.price_per_unit);
+        return sum;
+      }
+      return sum + item.price_per_unit;
+    },
     0
   );
   const completedCount = items.filter((item) => item.completed).length;
