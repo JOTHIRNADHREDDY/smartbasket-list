@@ -81,8 +81,9 @@ const Lists = () => {
 
           const itemCount = items?.length || 0;
           const completedCount = items?.filter((item) => item.completed).length || 0;
+          // Total spent should only count completed items
           const totalCost = items?.reduce(
-            (sum, item) => sum + Number(item.price_per_unit),
+            (sum, item) => item.completed ? sum + Number(item.price_per_unit) : sum,
             0
           ) || 0;
 
@@ -154,25 +155,18 @@ const Lists = () => {
         toast.success("List deleted");
       } else {
         // Shared user leaves the list (deletes their share record)
-        // First get user's email
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", user.id)
-          .single();
-
-        if (!profile) throw new Error("Profile not found");
-
-        // Get user's email from auth
         const email = user.email;
-        if (!email) throw new Error("Email not found");
+        if (!email) {
+          toast.error("Could not find user email");
+          return;
+        }
 
-        // Delete the share record
+        // Delete the share record using the user's email
         const { error } = await supabase
           .from("list_shares")
           .delete()
           .eq("list_id", id)
-          .eq("shared_with_email", email.toLowerCase());
+          .eq("shared_with_email", email);
 
         if (error) throw error;
         toast.success("Left shared list");
