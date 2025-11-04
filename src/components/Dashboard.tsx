@@ -38,10 +38,13 @@ const Dashboard = () => {
       const totalItems = items?.length || 0;
       const completedItems = items?.filter((item) => item.completed).length || 0;
       const totalBudget = lists?.reduce((sum, list) => sum + Number(list.budget || 0), 0) || 0;
-      const totalSpent = items?.reduce(
-        (sum, item) => sum + Number(item.quantity) * Number(item.price_per_unit),
+      
+      // Calculate total spent - only count completed items
+      const completedItemsList = items?.filter((item) => item.completed) || [];
+      const totalSpent = completedItemsList.reduce(
+        (sum, item) => sum + Number(item.price_per_unit || 0),
         0
-      ) || 0;
+      );
 
       setStats({
         totalLists,
