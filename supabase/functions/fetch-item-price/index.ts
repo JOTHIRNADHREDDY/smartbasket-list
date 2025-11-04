@@ -15,44 +15,42 @@ serve(async (req) => {
     
     console.log('Fetching price for item:', itemName, 'quantity:', quantity, unit);
 
-    // Using USDA FoodData Central API for food prices (free API)
-    // Note: This is a simplified example. In production, you might use:
-    // - Walmart API, Amazon Product API, or grocery-specific APIs
-    // - Web scraping services
-    // - Custom price databases
+    // Generate realistic Indian market prices based on item type
+    // Using smart estimation based on item category and common market prices
     
-    const USDA_API_KEY = Deno.env.get('USDA_API_KEY') || 'DEMO_KEY';
-    
-    const searchUrl = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(itemName)}&pageSize=5`;
-    
-    const response = await fetch(searchUrl);
-    const data = await response.json();
-    
-    if (!data.foods || data.foods.length === 0) {
-      // Return estimated price if API doesn't find item
-      const estimatedPrice = Math.random() * 10 + 1; // Random price between $1-$11
-      console.log('No data found, returning estimated price:', estimatedPrice);
-      
-      return new Response(
-        JSON.stringify({
-          price: parseFloat(estimatedPrice.toFixed(2)),
-          source: 'estimated',
-          itemName,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // For demo purposes, generate a realistic price based on item category
-    // In production, you'd parse actual price data from your chosen API
-    const firstFood = data.foods[0];
-    const category = firstFood.foodCategory || 'General';
-    
+    const itemLower = itemName.toLowerCase();
     let basePricePerKg = 80; // Default ₹80/kg
-    if (category.toLowerCase().includes('meat')) basePricePerKg = 250;
-    else if (category.toLowerCase().includes('produce')) basePricePerKg = 60;
-    else if (category.toLowerCase().includes('dairy')) basePricePerKg = 70;
-    else if (category.toLowerCase().includes('bakery')) basePricePerKg = 100;
+    let category = 'General';
+    
+    // Categorize items and set base prices
+    if (itemLower.includes('chicken') || itemLower.includes('mutton') || itemLower.includes('lamb') || itemLower.includes('meat')) {
+      basePricePerKg = 300;
+      category = 'Meat';
+    } else if (itemLower.includes('fish') || itemLower.includes('prawn') || itemLower.includes('shrimp')) {
+      basePricePerKg = 350;
+      category = 'Seafood';
+    } else if (itemLower.includes('milk') || itemLower.includes('paneer') || itemLower.includes('cheese') || itemLower.includes('butter') || itemLower.includes('ghee') || itemLower.includes('yogurt') || itemLower.includes('curd')) {
+      basePricePerKg = 70;
+      category = 'Dairy';
+    } else if (itemLower.includes('tomato') || itemLower.includes('potato') || itemLower.includes('onion') || itemLower.includes('carrot') || itemLower.includes('cabbage') || itemLower.includes('cauliflower') || itemLower.includes('vegetable')) {
+      basePricePerKg = 50;
+      category = 'Produce';
+    } else if (itemLower.includes('apple') || itemLower.includes('banana') || itemLower.includes('orange') || itemLower.includes('mango') || itemLower.includes('grape') || itemLower.includes('fruit')) {
+      basePricePerKg = 80;
+      category = 'Produce';
+    } else if (itemLower.includes('rice') || itemLower.includes('wheat') || itemLower.includes('flour') || itemLower.includes('atta') || itemLower.includes('grain')) {
+      basePricePerKg = 50;
+      category = 'Pantry';
+    } else if (itemLower.includes('oil') || itemLower.includes('cooking')) {
+      basePricePerKg = 150;
+      category = 'Pantry';
+    } else if (itemLower.includes('bread') || itemLower.includes('bun') || itemLower.includes('pav')) {
+      basePricePerKg = 40;
+      category = 'Bakery';
+    } else if (itemLower.includes('spice') || itemLower.includes('masala') || itemLower.includes('chilli') || itemLower.includes('turmeric') || itemLower.includes('coriander') || itemLower.includes('cumin')) {
+      basePricePerKg = 300;
+      category = 'Pantry';
+    }
     
     const variance = (Math.random() - 0.5) * 20; // +/- ₹10
     const pricePerKg = Math.max(30, basePricePerKg + variance);
