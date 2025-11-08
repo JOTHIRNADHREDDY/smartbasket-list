@@ -1,7 +1,1 @@
 project_id = "wgwtirjmlpmnktyrbjfm"
-
-[functions.ai-grocery-assistant]
-verify_jwt = false
-
-[functions.fetch-item-price]
-verify_jwt = false

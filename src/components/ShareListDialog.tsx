@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mail, Trash2 } from "lucide-react";
+import { shareListSchema } from "@/lib/validationSchemas";
 
 interface ShareListDialogProps {
   listId: string;
@@ -50,8 +51,15 @@ export const ShareListDialog = ({ listId, listName, open, onOpenChange }: ShareL
   };
 
   const handleShare = async () => {
-    if (!email) {
-      toast.error("Please enter an email address");
+    // Validate inputs
+    const validationResult = shareListSchema.safeParse({
+      email,
+      permission,
+    });
+
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0];
+      toast.error(firstError.message);
       return;
     }
 

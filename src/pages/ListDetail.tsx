@@ -52,6 +52,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import LovaChat from "@/components/LovaChat";
 import { formatPrice } from "@/lib/formatPrice";
+import { groceryItemSchema } from "@/lib/validationSchemas";
 
 interface GroceryItem {
   id: string;
@@ -288,7 +289,20 @@ const ListDetail = () => {
   };
 
   const handleAddItem = async () => {
-    if (!newItemName) return;
+    // Validate inputs
+    const validationResult = groceryItemSchema.safeParse({
+      name: newItemName,
+      quantity: parseFloat(newItemQuantity),
+      unit: newItemUnit,
+      price_per_unit: parseFloat(newItemPrice) || 0,
+      category: newItemCategory || undefined,
+    });
+
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0];
+      toast.error(firstError.message);
+      return;
+    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -330,7 +344,22 @@ const ListDetail = () => {
   };
 
   const handleEditItem = async () => {
-    if (!editingItem || !newItemName) return;
+    if (!editingItem) return;
+
+    // Validate inputs
+    const validationResult = groceryItemSchema.safeParse({
+      name: newItemName,
+      quantity: parseFloat(newItemQuantity),
+      unit: newItemUnit,
+      price_per_unit: parseFloat(newItemPrice) || 0,
+      category: newItemCategory || undefined,
+    });
+
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0];
+      toast.error(firstError.message);
+      return;
+    }
 
     try {
       const priceValue = parseFloat(newItemPrice) || 0;
