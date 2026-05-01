@@ -65,8 +65,8 @@ serve(async (req) => {
       );
     }
 
-    // Check rate limit (50 requests per minute)
-    const userId = getUserIdFromToken(authHeader);
+    // Verify and rate limit (50 requests per minute per authenticated user)
+    const userId = await verifyUser(authHeader);
     if (userId && !checkRateLimit(userId, 50, 60000)) {
       return new Response(
         JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
