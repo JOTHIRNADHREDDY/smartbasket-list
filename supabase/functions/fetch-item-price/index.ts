@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
@@ -26,13 +27,17 @@ function checkRateLimit(userId: string, limit: number, windowMs: number): boolea
   return true;
 }
 
-function getUserIdFromToken(authHeader: string): string | null {
+async function verifyUser(authHeader: string): Promise<string | null> {
   try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
     const token = authHeader.replace('Bearer ', '');
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1]));
-    return payload.sub || null;
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user) return null;
+    return data.user.id;
   } catch {
     return null;
   }
