@@ -1,73 +1,97 @@
-# Welcome to your Lovable project
+# Smart Basket 🧺
 
-## Project info
+Smart Basket is a collaborative grocery-planning app with **Lova**, an AI shopping assistant. Create shopping lists, estimate costs in Indian rupees, track purchases, and share lists with people you shop with.
 
-**URL**: https://lovable.dev/projects/7b3fdd55-8a05-4e25-8dd0-f815ad713213
+## Features
 
-## How can I edit this code?
+- **Account access:** Sign up and sign in with email and password.
+- **Grocery lists:** Create lists with optional budgets and shopping dates, then add, update, reorder, complete, or remove items.
+- **Shared shopping:** Share a list by email with view-only or edit access. List owners can see and remove shares; collaborators can leave a shared list without deleting it.
+- **Lova AI assistant:** Turn meal plans into grocery items, ask general shopping questions, and request nutrition information or lower-cost alternatives. Lova provides cooking instructions only when explicitly asked.
+- **Price estimates:** Estimate item prices using broad Indian market assumptions. Estimates are for planning and may not match a particular store or current local prices.
+- **Dashboard and analytics:** Review list and item counts, completion, budgets, and spending.
+- **Profile settings:** View the account email and update the profile name.
 
-There are several ways of editing your application.
+## Spending and prices
 
-**Use Lovable**
+- Prices are displayed in Indian rupees (₹) with Indian number formatting.
+- An item's saved price is the total estimate for its entered quantity and unit. The app does not multiply that saved price by the quantity again.
+- **Total Spent** counts completed (purchased) items only. **Estimated Total** is for items not yet completed. These measures are kept separate.
+- Price estimates are approximate, not live store quotes.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/7b3fdd55-8a05-4e25-8dd0-f815ad713213) and start prompting.
+## Technology
 
-Changes made via Lovable will be committed automatically to this repo.
+- React 18, TypeScript, and Vite
+- Tailwind CSS and shadcn/ui
+- Lovable Cloud for authentication, database access, and serverless functions
+- Zod for input validation
+- TanStack Query, React Router, Framer Motion, Recharts, and Lucide icons
 
-**Use your preferred IDE**
+## Getting started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Requirements
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Node.js and npm
+- A configured Lovable Cloud connection for sign-in, list storage, and AI/price functions
 
-Follow these steps:
+### Install and run locally
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Vite prints the local development address after startup.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Available scripts
 
-**Use GitHub Codespaces**
+```sh
+npm run dev       # Start the development server
+npm run build     # Create a production build
+npm run build:dev # Create a development-mode build
+npm run preview   # Preview the production build locally
+npm run lint      # Run ESLint
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The app expects its cloud connection settings to be supplied by the project environment. Do not commit private credentials or API keys.
 
-## What technologies are used for this project?
+## Main pages
 
-This project is built with:
+| Page | Path | Purpose |
+| --- | --- | --- |
+| Dashboard | `/` | Overview of lists, budgets, purchases, and completion |
+| Sign in | `/auth` | Create an account or sign in |
+| My Lists | `/lists` | Browse, create, and share grocery lists |
+| List details | `/list/:id` | Manage items in a list and use Lova |
+| Analytics | `/analytics` | Explore shopping activity |
+| Settings | `/settings` | Update the profile name |
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Serverless functions
 
-## How can I deploy this project?
+- **`ai-grocery-assistant`** — Handles Lova requests, validates request data, verifies the signed-in user, applies a per-user request limit, and fetches estimates for generated items.
+- **`fetch-item-price`** — Returns a broad category-based Indian market estimate for an item and quantity. Estimates are randomly varied and should not be treated as current vendor prices.
 
-Simply open [Lovable](https://lovable.dev/projects/7b3fdd55-8a05-4e25-8dd0-f815ad713213) and click on Share -> Publish.
+## Security and data handling
 
-## Can I connect a custom domain to my Lovable project?
+- Authenticated access is required for the AI and price functions. Requests are validated, and per-user rate limits are applied.
+- Access to grocery data is governed by database row-level access policies.
+- Realtime updates are used for database-change notifications; the app does not use Realtime broadcast or presence channels.
+- List-sharing records include the recipient email address so owners can see and manage who they shared a list with. Treat this as personal information.
+- Signup requires email verification; leaked-password protection is enabled in the authentication configuration.
 
-Yes, you can!
+## Project structure
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```text
+src/
+  components/       Shared interface and grocery-list components
+  integrations/     Generated Lovable Cloud client and types
+  lib/              Formatting, validation, and utility helpers
+  pages/            Application pages
+supabase/
+  functions/        Serverless AI and price-estimation functions
+  migrations/       Database schema and policy changes
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Deployment
+
+Build the app with `npm run build`. For a Lovable-hosted deployment, publish the project from Lovable so the application and its cloud configuration are deployed together.
